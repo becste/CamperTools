@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">CamperTools</string>
+    <string name="elevation_label">Elevation: –</string>
+    <string name="status_label">Status: idle</string>
+    <string name="refresh_button">Refresh elevation</string>
+    <string name="weather_now_label">Weather: –</string>
+    <string name="weather_range_label">Next 24h: –</string>
+    <string name="precip_label">Precipitation (24h): –</string>
+    <string name="weather_button">Get weather</string>
+    <string name="level_label">Level</string>
+    <string name="tilt_label">Tilt: 0.0° / 0.0°</string>
+    <string name="donate_button">Donate</string>
+    <string name="donation_success">Thank you for your donation!</string>
+    <string name="donation_error">Donation failed or cancelled</string>
+    <string name="units_toggle">Use Imperial Units (ft/°F)</string>
+</resources>

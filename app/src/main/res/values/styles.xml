@@ -1,0 +1,15 @@
+<resources>
+    
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/surface_color</item>
+        <item name="colorPrimaryVariant">@color/background_color</item>
+        <item name="colorOnPrimary">@color/primary_text</item>
+        <item name="colorSecondary">@color/secondary_text</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:windowBackground">@color/background_color</item>
+        <item name="android:textColor">@color/primary_text</item>
+    </style>
+    
+</resources>

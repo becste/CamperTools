@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal|center_vertical">
+
+    <!-- Elevation section -->
+    <TextView
+        android:id="@+id/textElevation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Elevation: –"
+        android:textSize="20sp"
+        android:paddingBottom="4dp" />
+
+    <TextView
+        android:id="@+id/textStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Status: idle"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/buttonRefresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Refresh elevation" />
+
+    <!-- Spacer -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="16dp" />
+
+    <!-- Weather section -->
+    <TextView
+        android:id="@+id/textWeatherNow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Weather: –"
+        android:textSize="18sp"
+        android:paddingBottom="4dp" />
+
+    <TextView
+        android:id="@+id/textWeatherRange"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Next 24h: –"
+        android:paddingBottom="4dp" />
+
+    <TextView
+        android:id="@+id/textPrecip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Precipitation (24h): –"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/buttonWeather"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Get weather" />
+
+    <!-- Spacer -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="24dp" />
+
+    <!-- Bubble level title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Level"
+        android:textSize="18sp"
+        android:paddingBottom="8dp" />
+
+    <!-- Bubble + bar levels -->
+    <com.campertools.app.LevelView
+        android:id="@+id/levelView"
+        android:layout_width="260dp"
+        android:layout_height="260dp" />
+
+    <!-- Text readout for tilt -->
+    <TextView
+        android:id="@+id/textTilt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tilt: 0.0° / 0.0°"
+        android:paddingTop="12dp" />
+
+</LinearLayout>

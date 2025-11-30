@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.campertools.app">
+
+    <!-- GPS permission for elevation-->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Internet permission for weather -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Declare support for all screen sizes -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true" />
+
+    <application
+        android:allowBackup="true"
+        android:label="CamperTools"
+        android:icon="@drawable/app_icon"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <activity
+            android:name=".MainActivity"
+            android:label="CamperTools">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+    </application>
+
+</manifest>
