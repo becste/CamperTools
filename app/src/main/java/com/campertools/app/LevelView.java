@@ -18,6 +18,7 @@ public class LevelView extends View {
     private Paint bubblePaint;
     private Paint barPaint;
     private Paint barBubblePaint;
+    private Paint linePaint;
 
     public LevelView(Context context) {
         super(context);
@@ -55,6 +56,11 @@ public class LevelView extends View {
         barBubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         barBubblePaint.setStyle(Paint.Style.FILL);
         barBubblePaint.setColor(primaryColor);
+        
+        linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        linePaint.setStyle(Paint.Style.STROKE);
+        linePaint.setStrokeWidth(3f);
+        linePaint.setColor(secondaryColor);
     }
 
     /**
@@ -85,6 +91,10 @@ public class LevelView extends View {
 
         // Outer circle
         canvas.drawCircle(circleCx, circleCy, circleRadius, circlePaint);
+        
+        // Crosshair for circular level
+        canvas.drawLine(circleCx - circleRadius, circleCy, circleCx + circleRadius, circleCy, linePaint);
+        canvas.drawLine(circleCx, circleCy - circleRadius, circleCx, circleCy + circleRadius, linePaint);
 
         float circleMaxOffset = circleRadius - circleBubbleRadius;
 
@@ -111,6 +121,9 @@ public class LevelView extends View {
 
         // Bar outline
         canvas.drawRoundRect(vBarRect, vBarRadius, vBarRadius, barPaint);
+        
+        // Center line for vertical bar
+        canvas.drawLine(vBarLeft, vBarCenterY, vBarRight, vBarCenterY, linePaint);
 
         float vBarBubbleRadius = vBarWidth / 2.5f;
         float vBarMaxOffset = (vBarHeight / 2f) - vBarBubbleRadius - 6f;
@@ -136,10 +149,14 @@ public class LevelView extends View {
 
         // Bar outline
         canvas.drawRoundRect(hBarRect, hBarRadius, hBarRadius, barPaint);
+        
+        float hBarCenterX = width / 2f;
+
+        // Center line for horizontal bar
+        canvas.drawLine(hBarCenterX, hBarTop, hBarCenterX, hBarBottom, linePaint);
 
         float hBarBubbleRadius = hBarHeight / 2.5f;
         float hBarMaxOffset = (hBarWidth / 2f) - hBarBubbleRadius - 8f;
-        float hBarCenterX = width / 2f;
 
         // Bubble moves with tiltX (left/right)
         float hBarBubbleCx = hBarCenterX - clampedX * hBarMaxOffset;

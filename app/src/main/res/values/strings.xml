@@ -13,4 +13,5 @@
     <string name="donation_success">Thank you for your donation!</string>
     <string name="donation_error">Donation failed or cancelled</string>
     <string name="units_toggle">Use Imperial Units (ft/°F)</string>
+    <string name="weather_credit">Weather data by <a href="https://www.open-meteo.com">Open-Meteo</a></string>
 </resources>

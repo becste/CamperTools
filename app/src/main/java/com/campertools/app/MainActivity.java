@@ -13,6 +13,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -48,7 +49,7 @@ import org.json.JSONObject;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private static final int REQUEST_LOCATION_PERMISSION = 1001;
-    private static final String DONATION_PRODUCT_ID = "donation_coffee"; // You must create this product ID in Play Console
+    private static final String DONATION_PRODUCT_ID = "donationcoffee"; // You must create this product ID in Play Console
 
     // Elevation UI
     private TextView textElevation;
@@ -70,6 +71,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button buttonDonate;
     private BillingClient billingClient;
     private ProductDetails donationProductDetails;
+    
+    // Credit
+    private TextView weatherCredit;
 
     // Location
     private LocationManager locationManager;
@@ -111,6 +115,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         
         // Donate UI
         buttonDonate = (Button) findViewById(R.id.buttonDonate);
+        
+        // Weather Credit
+        weatherCredit = (TextView) findViewById(R.id.weatherCredit);
+        if (weatherCredit != null) {
+            weatherCredit.setMovementMethod(LinkMovementMethod.getInstance());
+        }
 
         // Location services
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
