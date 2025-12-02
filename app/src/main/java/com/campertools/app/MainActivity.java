@@ -21,20 +21,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
-import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
-import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.ProductDetailsResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.QueryProductDetailsParams;
-import com.android.billingclient.api.QueryProductDetailsResult;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView textElevation;
     private TextView textStatus;
     private Button buttonRefresh;
-    private MaterialSwitch switchUnits;
+    private SwitchMaterial switchUnits;
 
     // Weather UI
     private TextView textWeatherNow;
@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private LevelView levelView;
     private CompassView compassView;
     private TextView textTilt;
-    private MaterialSwitch switchCompass;
+    private SwitchMaterial switchCompass;
     
     // Donation
     private Button buttonDonate;
@@ -125,7 +125,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         textElevation = (TextView) findViewById(R.id.textElevation);
         textStatus    = (TextView) findViewById(R.id.textStatus);
         buttonRefresh = (Button) findViewById(R.id.buttonRefresh);
-        switchUnits   = (MaterialSwitch) findViewById(R.id.switchUnits);
+        switchUnits   = (SwitchMaterial) findViewById(R.id.switchUnits);
 
         // Weather UI
         textWeatherNow   = (TextView) findViewById(R.id.textWeatherNow);
@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         levelView = (LevelView) findViewById(R.id.levelView);
         compassView = (CompassView) findViewById(R.id.compassView);
         textTilt  = (TextView) findViewById(R.id.textTilt);
-        switchCompass = (MaterialSwitch) findViewById(R.id.switchCompass);
+        switchCompass = (SwitchMaterial) findViewById(R.id.switchCompass);
         
         // Donate UI
         buttonDonate = (Button) findViewById(R.id.buttonDonate);
@@ -278,11 +278,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         billingClient = BillingClient.newBuilder(this)
                 .setListener(purchasesUpdatedListener)
-                .enablePendingPurchases(
-                        PendingPurchasesParams.newBuilder()
-                                .enableOneTimeProducts()
-                                .build()
-                )
+                .enablePendingPurchases()
                 .build();
 
         billingClient.startConnection(new BillingClientStateListener() {
@@ -318,12 +314,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             queryProductDetailsParams,
             new ProductDetailsResponseListener() {
                 public void onProductDetailsResponse(BillingResult billingResult,
-                        QueryProductDetailsResult productDetailsResult) {
+                        List<ProductDetails> productDetailsList) {
                     
-                    List<ProductDetails> productDetailsList = productDetailsResult.getProductDetailsList();
-                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK
-                            && productDetailsList != null
-                            && !productDetailsList.isEmpty()) {
+                    if (productDetailsList != null && !productDetailsList.isEmpty()) {
                         donationProductDetails = productDetailsList.get(0);
                         // You could update the button text here with the price
                         // e.g. buttonDonate.setText("Donate " + donationProductDetails.getOneTimePurchaseOfferDetails().getFormattedPrice());
@@ -377,9 +370,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // ========= Permission / location handling =========
 
     private void checkPermissionAndProceed() {
-        boolean hasFine = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            // Runtime permissions not required pre-M; continue directly
+            if (pendingWeather) {
+                requestWeatherLocation();
+            } else {
+                requestElevationLocation();
+            }
+            return;
+        }
+
+        boolean hasFine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
-        boolean hasCoarse = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+        boolean hasCoarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
         if (hasFine && hasCoarse) {
             if (pendingWeather) {
@@ -388,7 +391,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 requestElevationLocation();
             }
         } else {
-            requestPermissions(
+            ActivityCompat.requestPermissions(
+                    this,
                     new String[]{
                             Manifest.permission.ACCESS_COARSE_LOCATION,
                             Manifest.permission.ACCESS_FINE_LOCATION
