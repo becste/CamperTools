@@ -29,7 +29,7 @@
         android:text="@string/refresh_button" />
     
     <!-- Units toggle -->
-    <Switch
+    <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/switchUnits"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -56,6 +56,13 @@
         android:layout_height="wrap_content"
         android:text="@string/weather_range_label"
         android:paddingBottom="4dp" />
+        
+    <TextView
+        android:id="@+id/textWind"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/wind_label"
+        android:paddingBottom="4dp" />
 
     <TextView
         android:id="@+id/textPrecip"
@@ -75,19 +82,25 @@
         android:layout_width="match_parent"
         android:layout_height="24dp" />
 
-    <!-- Bubble level title -->
-    <TextView
+    <!-- Compass/Level Toggle -->
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switchCompass"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/level_label"
-        android:textSize="18sp"
-        android:paddingBottom="8dp" />
+        android:text="@string/compass_toggle" />
 
     <!-- Bubble + bar levels -->
     <com.campertools.app.LevelView
         android:id="@+id/levelView"
         android:layout_width="260dp"
         android:layout_height="260dp" />
+        
+    <!-- Compass View -->
+    <com.campertools.app.CompassView
+        android:id="@+id/compassView"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:visibility="gone" />
 
     <!-- Text readout for tilt -->
     <TextView

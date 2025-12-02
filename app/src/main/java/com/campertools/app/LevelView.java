@@ -19,6 +19,8 @@ public class LevelView extends View {
     private Paint barPaint;
     private Paint barBubblePaint;
     private Paint linePaint;
+    private final RectF vBarRect = new RectF();
+    private final RectF hBarRect = new RectF();
 
     public LevelView(Context context) {
         super(context);
@@ -116,7 +118,7 @@ public class LevelView extends View {
         float vBarTop = vBarCenterY - vBarHeight / 2f;
         float vBarBottom = vBarCenterY + vBarHeight / 2f;
 
-        RectF vBarRect = new RectF(vBarLeft, vBarTop, vBarRight, vBarBottom);
+        vBarRect.set(vBarLeft, vBarTop, vBarRight, vBarBottom);
         float vBarRadius = vBarWidth / 2f;
 
         // Bar outline
@@ -144,7 +146,7 @@ public class LevelView extends View {
         float hBarTop = hBarCenterY - hBarHeight / 2f;
         float hBarBottom = hBarCenterY + hBarHeight / 2f;
 
-        RectF hBarRect = new RectF(hBarLeft, hBarTop, hBarRight, hBarBottom);
+        hBarRect.set(hBarLeft, hBarTop, hBarRight, hBarBottom);
         float hBarRadius = hBarHeight / 2f;
 
         // Bar outline

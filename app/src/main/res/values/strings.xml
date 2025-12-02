@@ -5,13 +5,30 @@
     <string name="refresh_button">Refresh elevation</string>
     <string name="weather_now_label">Weather: –</string>
     <string name="weather_range_label">Next 24h: –</string>
+    <string name="wind_label">Wind (24h): –</string>
     <string name="precip_label">Precipitation (24h): –</string>
     <string name="weather_button">Get weather</string>
-    <string name="level_label">Level</string>
     <string name="tilt_label">Tilt: 0.0° / 0.0°</string>
     <string name="donate_button">Donate</string>
     <string name="donation_success">Thank you for your donation!</string>
     <string name="donation_error">Donation failed or cancelled</string>
     <string name="units_toggle">Use Imperial Units (ft/°F)</string>
     <string name="weather_credit">Weather data by <a href="https://www.open-meteo.com">Open-Meteo</a></string>
+    <string name="compass_toggle">Show Compass</string>
+    <string name="heading_placeholder">Heading: —°</string>
+    <string name="status_no_location_manager">No LocationManager found</string>
+    <string name="status_gps_disabled">GPS disabled in settings</string>
+    <string name="status_getting_elevation">Getting location (elevation)…</string>
+    <string name="weather_no_location_manager">Weather: no LocationManager</string>
+    <string name="weather_gps_disabled">Weather: GPS disabled</string>
+    <string name="weather_getting_location">Weather: getting location…</string>
+    <string name="weather_loading">Weather: loading…</string>
+    <string name="weather_parse_error">Weather: parse error</string>
+    <string name="weather_permission_denied">Weather: permission denied</string>
+    <string name="weather_error_with_message">Weather error: %1$s</string>
+    <string name="weather_next_loading">Next 24h: …</string>
+    <string name="precip_loading">Precipitation (24h): …</string>
+    <string name="wind_loading">Wind (24h): …</string>
+    <string name="status_gps_ok">GPS OK</string>
+    <string name="permission_denied">Permission denied</string>
 </resources>
