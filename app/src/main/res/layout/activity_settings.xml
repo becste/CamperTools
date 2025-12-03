@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="52dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_title"
+        android:textSize="20sp"
+        android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/camera_bump_label"
+            android:textSize="16sp"
+            android:paddingBottom="2dp" />
+
+        <EditText
+            android:id="@+id/inputCameraBump"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/camera_bump_hint"
+            android:inputType="numberDecimal"
+            android:maxLines="1"
+            android:padding="6dp" />
+
+        <RadioGroup
+            android:id="@+id/radioBumpAxis"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="6dp">
+
+            <RadioButton
+                android:id="@+id/radioBumpAxisPitch"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:checked="true"
+                android:text="@string/camera_bump_axis_pitch" />
+
+            <RadioButton
+                android:id="@+id/radioBumpAxisRoll"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/camera_bump_axis_roll" />
+        </RadioGroup>
+
+        <CheckBox
+            android:id="@+id/checkInvertDirection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/camera_bump_invert" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:gravity="end|center_vertical"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:id="@+id/buttonSave"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/save_settings"
+                android:textColor="@color/teal_200"
+                android:textSize="14sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="6dp" />
+
+            <TextView
+                android:id="@+id/textBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="@string/back"
+                android:textColor="@color/teal_200"
+                android:textSize="14sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

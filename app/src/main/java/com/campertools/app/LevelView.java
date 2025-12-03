@@ -87,7 +87,7 @@ public class LevelView extends View {
 
         // ---- CIRCULAR LEVEL (upper-left) ----
         float circleCx = width * 0.30f;
-        float circleCy = height * 0.35f;
+        float circleCy = height * 0.32f;
         float circleRadius = Math.min(width, height) * 0.22f;
         float circleBubbleRadius = circleRadius / 6f;
 
@@ -142,7 +142,7 @@ public class LevelView extends View {
         float hBarLeft = (width - hBarWidth) / 2f;
         float hBarRight = hBarLeft + hBarWidth;
 
-        float hBarCenterY = height * 0.80f;
+        float hBarCenterY = height * 0.70f;
         float hBarTop = hBarCenterY - hBarHeight / 2f;
         float hBarBottom = hBarCenterY + hBarHeight / 2f;
 

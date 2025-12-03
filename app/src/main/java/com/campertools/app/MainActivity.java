@@ -2,6 +2,7 @@ package com.campertools.app;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -15,7 +16,6 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.text.method.LinkMovementMethod;
 import android.view.View;
-import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -57,11 +57,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final float MAG_ALPHA = 0.10f;     // Low-pass filter for magnetometer
     private static final float TILT_ALPHA = 0.12f;    // Smoothing for tilt display
     private static final float AZIMUTH_ALPHA = 0.18f; // Smoothing for compass heading
+    private static final float DEFAULT_SUPPORT_SPAN_MM = 70f; // Approx distance between raised lens and opposite edge
+    private static final String STATE_BUMP_HEIGHT = "state_bump_height";
+    private static final String STATE_BUMP_ROLL = "state_bump_roll";
+    private static final String STATE_BUMP_DIR = "state_bump_dir";
 
     // Elevation UI
     private TextView textElevation;
     private TextView textStatus;
-    private Button buttonRefresh;
+    private TextView buttonRefresh;
     private SwitchMaterial switchUnits;
 
     // Weather UI
@@ -69,16 +73,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView textWeatherRange;
     private TextView textWind;
     private TextView textPrecip;
-    private Button buttonWeather;
+    private TextView buttonWeather;
 
     // Level UI
     private LevelView levelView;
     private CompassView compassView;
     private TextView textTilt;
     private SwitchMaterial switchCompass;
+    private TextView textSettingsLink;
     
     // Donation
-    private Button buttonDonate;
+    private TextView buttonDonate;
     private BillingClient billingClient;
     private ProductDetails donationProductDetails;
     
@@ -111,6 +116,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     
     // State for units
     private boolean useImperial = false;
+    private float lastBumpHeightMm = 0f;
+    private float compensationMagnitude = 0f;
+    private boolean compensationAppliesToRoll = false;
+    private float compensationDirection = -1f; // default assumes lens raises top (invert pitch)
     
     // Last known values
     private Location lastLocation;
@@ -120,11 +129,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_main);
+        
+        if (savedInstanceState != null) {
+            lastBumpHeightMm = savedInstanceState.getFloat(STATE_BUMP_HEIGHT, 0f);
+            compensationAppliesToRoll = savedInstanceState.getBoolean(STATE_BUMP_ROLL, false);
+            compensationDirection = savedInstanceState.getFloat(STATE_BUMP_DIR, -1f);
+            compensationMagnitude = computeNormalizedOffset(lastBumpHeightMm, DEFAULT_SUPPORT_SPAN_MM);
+        }
 
         // Elevation UI
         textElevation = (TextView) findViewById(R.id.textElevation);
         textStatus    = (TextView) findViewById(R.id.textStatus);
-        buttonRefresh = (Button) findViewById(R.id.buttonRefresh);
+        buttonRefresh = (TextView) findViewById(R.id.buttonRefresh);
         switchUnits   = (SwitchMaterial) findViewById(R.id.switchUnits);
 
         // Weather UI
@@ -132,16 +148,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         textWeatherRange = (TextView) findViewById(R.id.textWeatherRange);
         textWind         = (TextView) findViewById(R.id.textWind);
         textPrecip       = (TextView) findViewById(R.id.textPrecip);
-        buttonWeather    = (Button) findViewById(R.id.buttonWeather);
+        buttonWeather    = (TextView) findViewById(R.id.buttonWeather);
 
         // Level UI
         levelView = (LevelView) findViewById(R.id.levelView);
         compassView = (CompassView) findViewById(R.id.compassView);
         textTilt  = (TextView) findViewById(R.id.textTilt);
         switchCompass = (SwitchMaterial) findViewById(R.id.switchCompass);
+        textSettingsLink = (TextView) findViewById(R.id.textSettingsLink);
         
         // Donate UI
-        buttonDonate = (Button) findViewById(R.id.buttonDonate);
+        buttonDonate = (TextView) findViewById(R.id.buttonDonate);
         
         // Weather Credit
         weatherCredit = (TextView) findViewById(R.id.weatherCredit);
@@ -192,6 +209,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 refreshAllDisplays();
             }
         });
+        
+        // Open settings for bump compensation
+        if (textSettingsLink != null) {
+            textSettingsLink.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    openSettings();
+                }
+            });
+        }
 
         // Weather button
         buttonWeather.setOnClickListener(new View.OnClickListener() {
@@ -234,6 +261,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             } else {
                 textTilt.setText(getString(R.string.tilt_label));
             }
+        }
+        if (textSettingsLink != null) {
+            textSettingsLink.setVisibility(showCompass ? View.GONE : View.VISIBLE);
         }
     }
     
@@ -367,6 +397,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    private static final int REQUEST_SETTINGS = 2001;
     // ========= Permission / location handling =========
 
     private void checkPermissionAndProceed() {
@@ -400,6 +431,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     REQUEST_LOCATION_PERMISSION
             );
         }
+    }
+    
+    private void openSettings() {
+        Intent intent = new Intent(this, SettingsActivity.class);
+        intent.putExtra(SettingsActivity.EXTRA_HEIGHT_MM, lastBumpHeightMm);
+        intent.putExtra(SettingsActivity.EXTRA_APPLIES_ROLL, compensationAppliesToRoll);
+        intent.putExtra(SettingsActivity.EXTRA_INVERT, compensationDirection < 0f);
+        intent.putExtra(SettingsActivity.EXTRA_USE_IMPERIAL, useImperial);
+        startActivityForResult(intent, REQUEST_SETTINGS);
     }
 
     @SuppressWarnings("MissingPermission")
@@ -863,6 +903,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             sensorManager.unregisterListener(this);
         }
     }
+    
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putFloat(STATE_BUMP_HEIGHT, lastBumpHeightMm);
+        outState.putBoolean(STATE_BUMP_ROLL, compensationAppliesToRoll);
+        outState.putFloat(STATE_BUMP_DIR, compensationDirection);
+    }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -911,13 +959,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 smoothNormX += TILT_ALPHA * (normX - smoothNormX);
                 smoothNormY += TILT_ALPHA * (normY - smoothNormY);
             }
-
-            if (levelView != null) {
-                levelView.setTilt(smoothNormX, smoothNormY);
+            
+            // Apply camera bump compensation if provided
+            float offsetX = 0f;
+            float offsetY = 0f;
+            if (compensationMagnitude > 0f) {
+                if (compensationAppliesToRoll) {
+                    float sign = compensationDirection;
+                    offsetX = sign * compensationMagnitude;
+                } else {
+                    float sign = compensationDirection;
+                    offsetY = sign * compensationMagnitude;
+                }
             }
 
-            double pitchDeg = -Math.asin(smoothNormY) * 180.0 / Math.PI;
-            double rollDeg  =  Math.asin(smoothNormX) * 180.0 / Math.PI;
+            float adjustedX = clampUnit(smoothNormX - offsetX);
+            float adjustedY = clampUnit(smoothNormY - offsetY);
+
+            if (levelView != null) {
+                levelView.setTilt(adjustedX, adjustedY);
+            }
+
+            double pitchDeg = -Math.asin(adjustedY) * 180.0 / Math.PI;
+            double rollDeg  =  Math.asin(adjustedX) * 180.0 / Math.PI;
 
             if (textTilt != null) {
                 String tiltText = String.format(
@@ -967,6 +1031,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SETTINGS && resultCode == RESULT_OK && data != null) {
+            lastBumpHeightMm = data.getFloatExtra(SettingsActivity.EXTRA_HEIGHT_MM, 0f);
+            compensationAppliesToRoll = data.getBooleanExtra(SettingsActivity.EXTRA_APPLIES_ROLL, false);
+            boolean invert = data.getBooleanExtra(SettingsActivity.EXTRA_INVERT, false);
+            compensationDirection = invert ? -1f : 1f;
+            compensationMagnitude = computeNormalizedOffset(lastBumpHeightMm, DEFAULT_SUPPORT_SPAN_MM);
+            updateTiltAndCompass();
+        }
+    }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -977,6 +1054,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         for (int i = 0; i < input.length; i++) {
             output[i] += alpha * (input[i] - output[i]);
         }
+    }
+    
+    private float computeNormalizedOffset(float heightMm, float spanMm) {
+        float denom = (float) Math.sqrt(heightMm * heightMm + spanMm * spanMm);
+        if (denom == 0f) {
+            return 0f;
+        }
+        float normalized = heightMm / denom;
+        return clampUnit(normalized);
+    }
+    
+    private float clampUnit(float value) {
+        if (value > 1f) return 1f;
+        if (value < -1f) return -1f;
+        return value;
     }
     
     private int directionBucketIndex(double deg) {

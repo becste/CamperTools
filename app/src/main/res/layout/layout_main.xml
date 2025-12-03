@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:padding="16dp"
     android:gravity="center_horizontal|center_vertical">
 
     <!-- Elevation section -->
@@ -22,11 +22,15 @@
         android:text="@string/status_label"
         android:paddingBottom="8dp" />
 
-    <Button
+    <TextView
         android:id="@+id/buttonRefresh"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/refresh_button" />
+        android:text="@string/refresh_button"
+        android:textColor="@color/teal_200"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="4dp" />
     
     <!-- Units toggle -->
     <com.google.android.material.switchmaterial.SwitchMaterial
@@ -71,16 +75,15 @@
         android:text="@string/precip_label"
         android:paddingBottom="8dp" />
 
-    <Button
+    <TextView
         android:id="@+id/buttonWeather"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/weather_button" />
-
-    <!-- Spacer -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="24dp" />
+        android:text="@string/weather_button"
+        android:textColor="@color/teal_200"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="4dp" />
 
     <!-- Compass/Level Toggle -->
     <com.google.android.material.switchmaterial.SwitchMaterial
@@ -109,15 +112,30 @@
         android:layout_height="wrap_content"
         android:text="@string/tilt_label"
         android:paddingTop="12dp" />
+        
+    <TextView
+        android:id="@+id/textSettingsLink"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="@string/open_settings"
+        android:textColor="@color/teal_200"
+        android:textSize="14sp"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="4dp" />
     
     <!-- Donate button -->
-    <Button
+    <TextView
         android:id="@+id/buttonDonate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="10dp"
         android:text="@string/donate_button"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+        android:textColor="@color/teal_200"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="4dp" />
 
     <!-- Weather Credit -->
     <TextView
