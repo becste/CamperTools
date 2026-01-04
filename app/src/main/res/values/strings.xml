@@ -2,7 +2,7 @@
     <string name="app_name">CamperTools</string>
     <string name="elevation_label">Elevation: –</string>
     <string name="status_label">Status: idle</string>
-    <string name="refresh_button">Refresh elevation</string>
+    <string name="refresh_button">Refresh GPS</string>
     <string name="weather_now_label">Weather: –</string>
     <string name="weather_range_label">Next 24h: –</string>
     <string name="wind_label">Wind (24h): –</string>
@@ -18,7 +18,7 @@
     <string name="heading_placeholder">Heading: —°</string>
     <string name="status_no_location_manager">No LocationManager found</string>
     <string name="status_gps_disabled">GPS disabled in settings</string>
-    <string name="status_getting_elevation">Getting location (elevation)…</string>
+    <string name="status_getting_elevation">Getting GPS data…</string>
     <string name="weather_no_location_manager">Weather: no LocationManager</string>
     <string name="weather_gps_disabled">Weather: GPS disabled</string>
     <string name="weather_getting_location">Weather: getting location…</string>
@@ -35,10 +35,14 @@
     <string name="camera_bump_hint">Height (mm or inches)</string>
     <string name="camera_bump_axis_pitch">Affects pitch (top/bottom)</string>
     <string name="camera_bump_axis_roll">Affects roll (left/right)</string>
-    <string name="camera_bump_invalid">Enter a number &gt; 0 to apply compensation</string>
-    <string name="camera_bump_invert">Flip compensation direction</string>
+    <string name="camera_bump_invalid">Enter a number</string>
+    <string name="auto_calibrate_button">Measure from current tilt</string>
     <string name="settings_title">Level Settings</string>
     <string name="open_settings">Settings</string>
     <string name="save_settings">Save</string>
     <string name="back">Back</string>
+    <string name="extra_data_link">Extra data</string>
+    <string name="flashlight_toggle">Flashlight</string>
+    <string name="refresh_gps_button">Refresh GPS Coordinates</string>
+    <string name="night_mode_toggle">Night Mode</string>
 </resources>

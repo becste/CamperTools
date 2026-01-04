@@ -10,6 +10,10 @@ import androidx.core.content.ContextCompat;
 
 public class LevelView extends View {
 
+    // Non-linear gain to exaggerate small tilts while keeping output in [-1, 1]
+    private static final float HYPERBOLIC_GAIN = 2.0f;
+    private static final float HYPERBOLIC_NORMALIZER = (float) Math.tanh(HYPERBOLIC_GAIN);
+
     // Normalized tilt values in range -1..1
     private float tiltX = 0f;  // left/right
     private float tiltY = 0f;  // up/down
@@ -19,6 +23,7 @@ public class LevelView extends View {
     private Paint barPaint;
     private Paint barBubblePaint;
     private Paint linePaint;
+    private Paint centerLinePaint;
     private final RectF vBarRect = new RectF();
     private final RectF hBarRect = new RectF();
 
@@ -39,7 +44,7 @@ public class LevelView extends View {
 
     private void init(Context context) {
         int secondaryColor = ContextCompat.getColor(context, R.color.secondary_text);
-        int primaryColor = ContextCompat.getColor(context, R.color.teal_200); // Use accent color for bubbles
+        int primaryColor = ContextCompat.getColor(context, R.color.highlight_color);
 
         circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         circlePaint.setStyle(Paint.Style.STROKE);
@@ -49,6 +54,7 @@ public class LevelView extends View {
         bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         bubblePaint.setStyle(Paint.Style.FILL);
         bubblePaint.setColor(primaryColor);
+        bubblePaint.setAlpha(200); // Make bubble translucent
 
         barPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         barPaint.setStyle(Paint.Style.STROKE);
@@ -58,11 +64,33 @@ public class LevelView extends View {
         barBubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         barBubblePaint.setStyle(Paint.Style.FILL);
         barBubblePaint.setColor(primaryColor);
-        
+        barBubblePaint.setAlpha(200); // Make bubble translucent
+
         linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeWidth(3f);
         linePaint.setColor(secondaryColor);
+        linePaint.setAlpha(150);
+
+        centerLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        centerLinePaint.setStyle(Paint.Style.STROKE);
+        centerLinePaint.setStrokeWidth(5f); // Thicker line
+        centerLinePaint.setColor(secondaryColor);
+        centerLinePaint.setAlpha(200);
+    }
+
+    public void setNightMode(boolean isNightMode) {
+        int highlightColor;
+        if (isNightMode) {
+            highlightColor = ContextCompat.getColor(getContext(), R.color.red_500);
+        } else {
+            highlightColor = ContextCompat.getColor(getContext(), R.color.teal_200);
+        }
+        bubblePaint.setColor(highlightColor);
+        bubblePaint.setAlpha(200);
+        barBubblePaint.setColor(highlightColor);
+        barBubblePaint.setAlpha(200);
+        invalidate();
     }
 
     /**
@@ -84,25 +112,32 @@ public class LevelView extends View {
         // Clamp tilt -1..1
         float clampedX = Math.max(-1f, Math.min(1f, tiltX));
         float clampedY = Math.max(-1f, Math.min(1f, tiltY));
+        float displayX = hyperbolicScale(clampedX);
+        float displayY = hyperbolicScale(clampedY);
 
         // ---- CIRCULAR LEVEL (upper-left) ----
         float circleCx = width * 0.30f;
-        float circleCy = height * 0.32f;
+        float circleCy = height * 0.40f;
         float circleRadius = Math.min(width, height) * 0.22f;
-        float circleBubbleRadius = circleRadius / 6f;
+        float circleBubbleRadius = circleRadius / 5f;
 
         // Outer circle
         canvas.drawCircle(circleCx, circleCy, circleRadius, circlePaint);
-        
+
+        // Concentric guide lines
+        for (int i = 1; i <= 3; i++) {
+            canvas.drawCircle(circleCx, circleCy, circleRadius * (i / 4.0f), linePaint);
+        }
+
         // Crosshair for circular level
-        canvas.drawLine(circleCx - circleRadius, circleCy, circleCx + circleRadius, circleCy, linePaint);
-        canvas.drawLine(circleCx, circleCy - circleRadius, circleCx, circleCy + circleRadius, linePaint);
+        canvas.drawLine(circleCx - circleRadius, circleCy, circleCx + circleRadius, circleCy, centerLinePaint);
+        canvas.drawLine(circleCx, circleCy - circleRadius, circleCx, circleCy + circleRadius, centerLinePaint);
 
         float circleMaxOffset = circleRadius - circleBubbleRadius;
 
-        // Bubble moves opposite to tilt on X, same on Y
-        float circleBubbleCx = circleCx - clampedX * circleMaxOffset;
-        float circleBubbleCy = circleCy + clampedY * circleMaxOffset;
+        // Bubble moves to the highest point (opposite of tilt)
+        float circleBubbleCx = circleCx + displayX * circleMaxOffset;
+        float circleBubbleCy = circleCy - displayY * circleMaxOffset;
 
         canvas.drawCircle(circleBubbleCx, circleBubbleCy, circleBubbleRadius, bubblePaint);
 
@@ -123,16 +158,24 @@ public class LevelView extends View {
 
         // Bar outline
         canvas.drawRoundRect(vBarRect, vBarRadius, vBarRadius, barPaint);
-        
+
         // Center line for vertical bar
-        canvas.drawLine(vBarLeft, vBarCenterY, vBarRight, vBarCenterY, linePaint);
+        canvas.drawLine(vBarLeft, vBarCenterY, vBarRight, vBarCenterY, centerLinePaint);
+
+        // Guide lines for vertical bar
+        for (int i = 1; i <= 2; i++) {
+            float y = vBarCenterY - (vBarHeight / 2.0f) * (i / 3.0f);
+            canvas.drawLine(vBarLeft, y, vBarRight, y, linePaint);
+            y = vBarCenterY + (vBarHeight / 2.0f) * (i / 3.0f);
+            canvas.drawLine(vBarLeft, y, vBarRight, y, linePaint);
+        }
 
         float vBarBubbleRadius = vBarWidth / 2.5f;
         float vBarMaxOffset = (vBarHeight / 2f) - vBarBubbleRadius - 6f;
 
-        // Bubble moves with tiltY (up/down)
+        // Bubble moves to the highest point (opposite of tilt)
         float vBarBubbleCx = vBarCenterX;
-        float vBarBubbleCy = vBarCenterY + clampedY * vBarMaxOffset;
+        float vBarBubbleCy = vBarCenterY - displayY * vBarMaxOffset;
 
         canvas.drawCircle(vBarBubbleCx, vBarBubbleCy, vBarBubbleRadius, barBubblePaint);
 
@@ -142,7 +185,7 @@ public class LevelView extends View {
         float hBarLeft = (width - hBarWidth) / 2f;
         float hBarRight = hBarLeft + hBarWidth;
 
-        float hBarCenterY = height * 0.70f;
+        float hBarCenterY = height * 0.80f;
         float hBarTop = hBarCenterY - hBarHeight / 2f;
         float hBarBottom = hBarCenterY + hBarHeight / 2f;
 
@@ -151,19 +194,32 @@ public class LevelView extends View {
 
         // Bar outline
         canvas.drawRoundRect(hBarRect, hBarRadius, hBarRadius, barPaint);
-        
+
         float hBarCenterX = width / 2f;
 
         // Center line for horizontal bar
-        canvas.drawLine(hBarCenterX, hBarTop, hBarCenterX, hBarBottom, linePaint);
+        canvas.drawLine(hBarCenterX, hBarTop, hBarCenterX, hBarBottom, centerLinePaint);
+
+        // Guide lines for horizontal bar
+        for (int i = 1; i <= 4; i++) {
+            float x = hBarCenterX - (hBarWidth / 2.0f) * (i / 5.0f);
+            canvas.drawLine(x, hBarTop, x, hBarBottom, linePaint);
+            x = hBarCenterX + (hBarWidth / 2.0f) * (i / 5.0f);
+            canvas.drawLine(x, hBarTop, x, hBarBottom, linePaint);
+        }
 
         float hBarBubbleRadius = hBarHeight / 2.5f;
         float hBarMaxOffset = (hBarWidth / 2f) - hBarBubbleRadius - 8f;
 
-        // Bubble moves with tiltX (left/right)
-        float hBarBubbleCx = hBarCenterX - clampedX * hBarMaxOffset;
+        // Bubble moves to the highest point (opposite of tilt)
+        float hBarBubbleCx = hBarCenterX + displayX * hBarMaxOffset;
         float hBarBubbleCy = hBarCenterY;
 
         canvas.drawCircle(hBarBubbleCx, hBarBubbleCy, hBarBubbleRadius, barBubblePaint);
+    }
+
+    private float hyperbolicScale(float value) {
+        float scaled = (float) Math.tanh(HYPERBOLIC_GAIN * value);
+        return scaled / HYPERBOLIC_NORMALIZER;
     }
 }

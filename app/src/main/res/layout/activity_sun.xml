@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal|center_vertical">
+
+    <TextView
+        android:id="@+id/textSunrise"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="24sp"
+        android:text="Sunrise: –" />
+
+    <TextView
+        android:id="@+id/textSunset"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textSize="24sp"
+        android:text="Sunset: –" />
+
+    <TextView
+        android:id="@+id/textWindGusts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textSize="18sp"
+        android:text="Max Gusts (24h): –" />
+
+    <TextView
+        android:id="@+id/textSunshine"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="18sp"
+        android:text="Sunshine (24h): –" />
+
+    <TextView
+        android:id="@+id/textCloudCover"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="18sp"
+        android:text="Cloud Cover (avg): –" />
+
+    <TextView
+        android:id="@+id/textSunStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="Getting location..."/>
+
+    <TextView
+        android:id="@+id/textBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="@string/back"
+        android:textColor="@color/teal_200"
+        android:textSize="14sp"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="6dp"
+        android:background="?attr/selectableItemBackgroundBorderless" />
+
+</LinearLayout>

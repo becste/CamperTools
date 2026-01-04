@@ -4,27 +4,39 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.text.method.LinkMovementMethod;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.CompoundButton;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
@@ -52,21 +64,28 @@ import org.json.JSONObject;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private static final int REQUEST_LOCATION_PERMISSION = 1001;
-    private static final String DONATION_PRODUCT_ID = "donationcoffee"; // You must create this product ID in Play Console
-    private static final float ACCEL_ALPHA = 0.12f;   // Low-pass filter for accelerometer
-    private static final float MAG_ALPHA = 0.10f;     // Low-pass filter for magnetometer
-    private static final float TILT_ALPHA = 0.12f;    // Smoothing for tilt display
-    private static final float AZIMUTH_ALPHA = 0.18f; // Smoothing for compass heading
-    private static final float DEFAULT_SUPPORT_SPAN_MM = 70f; // Approx distance between raised lens and opposite edge
+    private static final int REQUEST_CAMERA_PERMISSION = 1003;
+    private static final int REQUEST_SETTINGS = 2001;
+    private static final String DONATION_PRODUCT_ID = "donationcoffee";
+    private static final float ACCEL_ALPHA = 0.12f;
+    private static final float MAG_ALPHA = 0.10f;
+    private static final float TILT_ALPHA = 0.12f;
+    private static final float AZIMUTH_ALPHA = 0.18f;
+    private static final float DEFAULT_SUPPORT_SPAN_MM = 70f;
     private static final String STATE_BUMP_HEIGHT = "state_bump_height";
     private static final String STATE_BUMP_ROLL = "state_bump_roll";
-    private static final String STATE_BUMP_DIR = "state_bump_dir";
+    private static final String PREFS = "campertools_prefs";
+    private static final String PREF_BUMP_HEIGHT = "pref_bump_height";
+    private static final String PREF_BUMP_ROLL = "pref_bump_roll";
+    private static final String PREF_USE_IMPERIAL = "pref_use_imperial";
+    private static final String PREF_USE_NIGHT_MODE = "pref_use_night_mode";
+    private static final long WEATHER_CACHE_WINDOW_MS = 60_000L;
+    private static final long LOCATION_TIMEOUT_MS = 12_000L;
 
     // Elevation UI
     private TextView textElevation;
     private TextView textStatus;
     private TextView buttonRefresh;
-    private SwitchMaterial switchUnits;
 
     // Weather UI
     private TextView textWeatherNow;
@@ -74,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView textWind;
     private TextView textPrecip;
     private TextView buttonWeather;
+    private TextView buttonExtraData;
 
     // Level UI
     private LevelView levelView;
@@ -81,12 +101,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView textTilt;
     private SwitchMaterial switchCompass;
     private TextView textSettingsLink;
-    
+
+    // Flashlight UI
+    private SwitchMaterial switchFlashlight;
+    private SeekBar seekBrightness;
+
     // Donation
     private TextView buttonDonate;
     private BillingClient billingClient;
     private ProductDetails donationProductDetails;
-    
+
     // Credit
     private TextView weatherCredit;
 
@@ -110,56 +134,80 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float smoothNormY = 0f;
     private float smoothedAzimuthDeg = Float.NaN;
 
+    // Camera
+    private CameraManager cameraManager;
+    private String cameraId;
+    private boolean flashlightOn = false;
+    private int maxBrightnessLevel = 1;
+
     // Track if location request is for weather or elevation
     private boolean pendingWeather = false;
     private boolean showCompass = false;
-    
+
     // State for units
     private boolean useImperial = false;
+    private boolean useNightMode = false;
     private float lastBumpHeightMm = 0f;
     private float compensationMagnitude = 0f;
     private boolean compensationAppliesToRoll = false;
-    private float compensationDirection = -1f; // default assumes lens raises top (invert pitch)
-    
+    private long lastWeatherFetchMs = 0L;
+    private String lastWeatherKey = null;
+
     // Last known values
-    private Location lastLocation;
+    public static Location cachedLocation;
     private String lastJsonWeather;
+    private FusedLocationProviderClient fusedLocationClient;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private LocationCallback pendingLocationCallback;
+    private Runnable pendingLocationTimeout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_main);
-        
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         if (savedInstanceState != null) {
             lastBumpHeightMm = savedInstanceState.getFloat(STATE_BUMP_HEIGHT, 0f);
             compensationAppliesToRoll = savedInstanceState.getBoolean(STATE_BUMP_ROLL, false);
-            compensationDirection = savedInstanceState.getFloat(STATE_BUMP_DIR, -1f);
-            compensationMagnitude = computeNormalizedOffset(lastBumpHeightMm, DEFAULT_SUPPORT_SPAN_MM);
+            useImperial = prefs.getBoolean(PREF_USE_IMPERIAL, false);
+            useNightMode = prefs.getBoolean(PREF_USE_NIGHT_MODE, false);
+        } else {
+            lastBumpHeightMm = prefs.getFloat(PREF_BUMP_HEIGHT, 0f);
+            compensationAppliesToRoll = prefs.getBoolean(PREF_BUMP_ROLL, false);
+            useImperial = prefs.getBoolean(PREF_USE_IMPERIAL, false);
+            useNightMode = prefs.getBoolean(PREF_USE_NIGHT_MODE, false);
         }
+        compensationMagnitude = computeNormalizedOffset(Math.abs(lastBumpHeightMm), DEFAULT_SUPPORT_SPAN_MM);
 
         // Elevation UI
         textElevation = (TextView) findViewById(R.id.textElevation);
-        textStatus    = (TextView) findViewById(R.id.textStatus);
+        textStatus = (TextView) findViewById(R.id.textStatus);
         buttonRefresh = (TextView) findViewById(R.id.buttonRefresh);
-        switchUnits   = (SwitchMaterial) findViewById(R.id.switchUnits);
 
         // Weather UI
-        textWeatherNow   = (TextView) findViewById(R.id.textWeatherNow);
+        textWeatherNow = (TextView) findViewById(R.id.textWeatherNow);
         textWeatherRange = (TextView) findViewById(R.id.textWeatherRange);
-        textWind         = (TextView) findViewById(R.id.textWind);
-        textPrecip       = (TextView) findViewById(R.id.textPrecip);
-        buttonWeather    = (TextView) findViewById(R.id.buttonWeather);
+        textWind = (TextView) findViewById(R.id.textWind);
+        textPrecip = (TextView) findViewById(R.id.textPrecip);
+        buttonWeather = (TextView) findViewById(R.id.buttonWeather);
+        buttonExtraData = (TextView) findViewById(R.id.buttonExtraData);
 
         // Level UI
         levelView = (LevelView) findViewById(R.id.levelView);
         compassView = (CompassView) findViewById(R.id.compassView);
-        textTilt  = (TextView) findViewById(R.id.textTilt);
+        textTilt = (TextView) findViewById(R.id.textTilt);
         switchCompass = (SwitchMaterial) findViewById(R.id.switchCompass);
         textSettingsLink = (TextView) findViewById(R.id.textSettingsLink);
-        
+
+        // Flashlight
+        switchFlashlight = findViewById(R.id.switchFlashlight);
+        seekBrightness = findViewById(R.id.seekBrightness);
+
         // Donate UI
         buttonDonate = (TextView) findViewById(R.id.buttonDonate);
-        
+
         // Weather Credit
         weatherCredit = (TextView) findViewById(R.id.weatherCredit);
         if (weatherCredit != null) {
@@ -173,18 +221,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            magnetometer  = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+            magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         }
 
-        // Elevation refresh button
-        buttonRefresh.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                pendingWeather = false;
-                checkPermissionAndProceed();
-            }
-        });
-        
+        // Flashlight setup
+        initFlashlight();
+
         // Compass toggle
         if (switchCompass != null) {
             if (magnetometer == null) {
@@ -196,20 +238,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                         showCompass = isChecked;
                         updateModeViews();
+                        updateSensorRegistration();
                     }
                 });
             }
         }
 
-        // Units toggle
-        switchUnits.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                useImperial = isChecked;
-                refreshAllDisplays();
-            }
-        });
-        
         // Open settings for bump compensation
         if (textSettingsLink != null) {
             textSettingsLink.setOnClickListener(new View.OnClickListener() {
@@ -220,15 +254,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             });
         }
 
+        // Refresh GPS (Elevation) button
+        if (buttonRefresh != null) {
+            buttonRefresh.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    textStatus.setText(getString(R.string.status_getting_elevation));
+                    requestSingleLocation(false);
+                }
+            });
+        }
+
         // Weather button
         buttonWeather.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                pendingWeather = true;
-                checkPermissionAndProceed();
+                if (cachedLocation != null) {
+                    fetchWeather(cachedLocation.getLatitude(), cachedLocation.getLongitude());
+                } else {
+                    pendingWeather = true;
+                    checkPermissionAndProceed();
+                }
             }
         });
-        
+
+
+        // Extra data button
+        buttonExtraData.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, SunActivity.class);
+                if (lastJsonWeather != null) {
+                    intent.putExtra("weather_json", lastJsonWeather);
+                }
+                startActivity(intent);
+            }
+        });
+
         // Donation button
         buttonDonate.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -236,18 +298,117 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 launchPurchaseFlow();
             }
         });
-        
+
         // Initialize Billing
         setupBillingClient();
 
         // Initial elevation request
-        pendingWeather = false;
-        checkPermissionAndProceed();
-        
+        if (cachedLocation == null) {
+            pendingWeather = false;
+            checkPermissionAndProceed();
+        }
+
         // Ensure initial mode visibility
         updateModeViews();
+        applyNightMode();
     }
-    
+
+    private void initFlashlight() {
+        boolean hasFlash = getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
+        if (!hasFlash) {
+            switchFlashlight.setEnabled(false);
+            seekBrightness.setVisibility(View.GONE);
+            return;
+        }
+
+        try {
+            cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            cameraId = cameraManager.getCameraIdList()[0];
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                maxBrightnessLevel = cameraManager.getCameraCharacteristics(cameraId)
+                        .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL);
+            }
+        } catch (CameraAccessException | NullPointerException e) {
+            e.printStackTrace();
+            switchFlashlight.setEnabled(false);
+            return;
+        }
+
+        if (maxBrightnessLevel > 1) {
+            seekBrightness.setMax(maxBrightnessLevel - 1);
+            seekBrightness.setProgress(0);
+        } else {
+            seekBrightness.setVisibility(View.GONE);
+        }
+
+        switchFlashlight.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+                    buttonView.setChecked(false); // Revert switch state until permission is granted
+                } else {
+                    turnOnFlashlight();
+                }
+            } else {
+                turnOffFlashlight();
+            }
+        });
+
+        seekBrightness.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser && flashlightOn) {
+                    setFlashlightBrightness(progress + 1);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+    }
+
+    private void turnOnFlashlight() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && maxBrightnessLevel > 1) {
+                int level = seekBrightness.getProgress() + 1;
+                cameraManager.turnOnTorchWithStrengthLevel(cameraId, level);
+                seekBrightness.setVisibility(View.VISIBLE);
+            } else {
+                cameraManager.setTorchMode(cameraId, true);
+                seekBrightness.setVisibility(View.GONE);
+            }
+            flashlightOn = true;
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void turnOffFlashlight() {
+        try {
+            cameraManager.setTorchMode(cameraId, false);
+            flashlightOn = false;
+            seekBrightness.setVisibility(View.GONE);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void setFlashlightBrightness(int level) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && maxBrightnessLevel > 1) {
+            try {
+                // Level must be >= 1
+                cameraManager.turnOnTorchWithStrengthLevel(cameraId, level);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void updateModeViews() {
         if (levelView != null) {
             levelView.setVisibility(showCompass ? View.GONE : View.VISIBLE);
@@ -262,17 +423,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 textTilt.setText(getString(R.string.tilt_label));
             }
         }
-        if (textSettingsLink != null) {
-            textSettingsLink.setVisibility(showCompass ? View.GONE : View.VISIBLE);
-        }
     }
-    
+
     private void refreshAllDisplays() {
-        // Refresh elevation text if we have a location
-        if (lastLocation != null) {
-            updateElevation(lastLocation);
+        if (cachedLocation != null) {
+            updateElevation(cachedLocation);
         }
-        // Refresh weather text if we have JSON data
         if (lastJsonWeather != null) {
             String[] texts = parseWeatherJson(lastJsonWeather);
             if (texts != null) {
@@ -285,24 +441,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
-    
-    // ========= Billing / Donation =========
-    
+
     private void setupBillingClient() {
-        PurchasesUpdatedListener purchasesUpdatedListener = new PurchasesUpdatedListener() {
-            @Override
-            public void onPurchasesUpdated(BillingResult billingResult, List<Purchase> purchases) {
-                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK
-                        && purchases != null) {
-                    for (Purchase purchase : purchases) {
-                        handlePurchase(purchase);
-                    }
-                } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
-                    // Handle user cancellation
-                } else {
-                    // Handle other errors
-                    Toast.makeText(MainActivity.this, R.string.donation_error, Toast.LENGTH_SHORT).show();
+        PurchasesUpdatedListener purchasesUpdatedListener = (billingResult, purchases) -> {
+            if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK
+                    && purchases != null) {
+                for (Purchase purchase : purchases) {
+                    handlePurchase(purchase);
                 }
+            } else if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
+                // Handle user cancellation
+            } else {
+                Toast.makeText(MainActivity.this, R.string.donation_error, Toast.LENGTH_SHORT).show();
             }
         };
 
@@ -329,80 +479,60 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void queryProductDetails() {
         List<QueryProductDetailsParams.Product> productList = new ArrayList<>();
         productList.add(
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(DONATION_PRODUCT_ID)
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build()
+                QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(DONATION_PRODUCT_ID)
+                        .setProductType(BillingClient.ProductType.INAPP)
+                        .build()
         );
 
         QueryProductDetailsParams queryProductDetailsParams =
-            QueryProductDetailsParams.newBuilder()
-                .setProductList(productList)
-                .build();
+                QueryProductDetailsParams.newBuilder()
+                        .setProductList(productList)
+                        .build();
 
         billingClient.queryProductDetailsAsync(
-            queryProductDetailsParams,
-            new ProductDetailsResponseListener() {
-                public void onProductDetailsResponse(BillingResult billingResult,
-                        List<ProductDetails> productDetailsList) {
-                    
+                queryProductDetailsParams,
+                (billingResult, productDetailsList) -> {
+
                     if (productDetailsList != null && !productDetailsList.isEmpty()) {
                         donationProductDetails = productDetailsList.get(0);
-                        // You could update the button text here with the price
-                        // e.g. buttonDonate.setText("Donate " + donationProductDetails.getOneTimePurchaseOfferDetails().getFormattedPrice());
                     }
                 }
-            }
         );
     }
-    
+
     private void launchPurchaseFlow() {
         if (donationProductDetails != null) {
             List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = new ArrayList<>();
             productDetailsParamsList.add(
-                BillingFlowParams.ProductDetailsParams.newBuilder()
-                    .setProductDetails(donationProductDetails)
-                    .build()
+                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(donationProductDetails)
+                            .build()
             );
 
             BillingFlowParams billingFlowParams = BillingFlowParams.newBuilder()
-                .setProductDetailsParamsList(productDetailsParamsList)
-                .build();
+                    .setProductDetailsParamsList(productDetailsParamsList)
+                    .build();
 
             billingClient.launchBillingFlow(this, billingFlowParams);
         } else {
             Toast.makeText(this, "Billing service not ready or product not found", Toast.LENGTH_SHORT).show();
         }
     }
-    
+
     private void handlePurchase(Purchase purchase) {
         if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-            // Consume the purchase so they can donate again
             com.android.billingclient.api.ConsumeParams consumeParams =
                     com.android.billingclient.api.ConsumeParams.newBuilder()
                             .setPurchaseToken(purchase.getPurchaseToken())
                             .build();
 
-            billingClient.consumeAsync(consumeParams, new com.android.billingclient.api.ConsumeResponseListener() {
-                @Override
-                public void onConsumeResponse(BillingResult billingResult, String purchaseToken) {
-                     runOnUiThread(new Runnable() {
-                         @Override
-                         public void run() {
-                             Toast.makeText(MainActivity.this, R.string.donation_success, Toast.LENGTH_LONG).show();
-                         }
-                     });
-                }
-            });
+            billingClient.consumeAsync(consumeParams, (billingResult, purchaseToken) -> runOnUiThread(() -> Toast.makeText(MainActivity.this, R.string.donation_success, Toast.LENGTH_LONG).show()));
         }
     }
 
-    private static final int REQUEST_SETTINGS = 2001;
-    // ========= Permission / location handling =========
-
     private void checkPermissionAndProceed() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            // Runtime permissions not required pre-M; continue directly
             if (pendingWeather) {
                 requestWeatherLocation();
             } else {
@@ -432,64 +562,35 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             );
         }
     }
-    
+
     private void openSettings() {
         Intent intent = new Intent(this, SettingsActivity.class);
-        intent.putExtra(SettingsActivity.EXTRA_HEIGHT_MM, lastBumpHeightMm);
+        intent.putExtra(SettingsActivity.EXTRA_HEIGHT_MM, Math.abs(lastBumpHeightMm));
         intent.putExtra(SettingsActivity.EXTRA_APPLIES_ROLL, compensationAppliesToRoll);
-        intent.putExtra(SettingsActivity.EXTRA_INVERT, compensationDirection < 0f);
         intent.putExtra(SettingsActivity.EXTRA_USE_IMPERIAL, useImperial);
+        intent.putExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, useNightMode);
         startActivityForResult(intent, REQUEST_SETTINGS);
     }
 
     @SuppressWarnings("MissingPermission")
     private void requestElevationLocation() {
-        if (locationManager == null) {
+        if (locationManager == null && fusedLocationClient == null) {
             textStatus.setText(getString(R.string.status_no_location_manager));
             return;
         }
 
-        boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        if (!gpsEnabled) {
-            textStatus.setText(getString(R.string.status_gps_disabled));
-            return;
-        }
-
         textStatus.setText(getString(R.string.status_getting_elevation));
-
-        locationManager.requestSingleUpdate(
-                LocationManager.GPS_PROVIDER,
-                new LocationListener() {
-                    @Override
-                    public void onLocationChanged(Location location) {
-                        lastLocation = location;
-                        updateElevation(location);
-                    }
-
-                    @Override
-                    public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-                    @Override
-                    public void onProviderEnabled(String provider) {}
-
-                    @Override
-                    public void onProviderDisabled(String provider) {}
-                },
-                Looper.getMainLooper()
-        );
+        requestSingleLocation(false);
     }
 
     @SuppressWarnings("MissingPermission")
     private void requestWeatherLocation() {
-        if (locationManager == null) {
-            textWeatherNow.setText(getString(R.string.weather_no_location_manager));
-            textPrecip.setText(getString(R.string.precip_label));
+        if (cachedLocation != null) {
+            fetchWeather(cachedLocation.getLatitude(), cachedLocation.getLongitude());
             return;
         }
-
-        boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        if (!gpsEnabled) {
-            textWeatherNow.setText(getString(R.string.weather_gps_disabled));
+        if (locationManager == null && fusedLocationClient == null) {
+            textWeatherNow.setText(getString(R.string.weather_no_location_manager));
             textPrecip.setText(getString(R.string.precip_label));
             return;
         }
@@ -497,28 +598,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         textWeatherNow.setText(getString(R.string.weather_getting_location));
         textWeatherRange.setText(getString(R.string.weather_next_loading));
         textPrecip.setText(getString(R.string.precip_loading));
-
-        locationManager.requestSingleUpdate(
-                LocationManager.GPS_PROVIDER,
-                new LocationListener() {
-                    @Override
-                    public void onLocationChanged(Location location) {
-                        double lat = location.getLatitude();
-                        double lon = location.getLongitude();
-                        fetchWeather(lat, lon);
-                    }
-
-                    @Override
-                    public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-                    @Override
-                    public void onProviderEnabled(String provider) {}
-
-                    @Override
-                    public void onProviderDisabled(String provider) {}
-                },
-                Looper.getMainLooper()
-        );
+        requestSingleLocation(true);
     }
 
     private void updateElevation(Location location) {
@@ -528,7 +608,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (Math.abs(altitude) < 30.0) {
             altitude = 0.0;
         }
-        
+
         String elevationString;
         if (useImperial) {
             // Meters to feet
@@ -552,22 +632,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           String[] permissions,
-                                           int[] grantResults) {
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_CAMERA_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                switchFlashlight.setChecked(true);
+                turnOnFlashlight();
+            } else {
+                Toast.makeText(this, "Camera permission is required for the flashlight", Toast.LENGTH_SHORT).show();
+            }
+        }
 
         if (requestCode == REQUEST_LOCATION_PERMISSION) {
             boolean hasFine = false;
             boolean hasCoarse = false;
-            if (grantResults != null) {
-                for (int i = 0; i < grantResults.length; i++) {
-                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                        String perm = permissions[i];
-                        if (Manifest.permission.ACCESS_FINE_LOCATION.equals(perm)) {
-                            hasFine = true;
-                        } else if (Manifest.permission.ACCESS_COARSE_LOCATION.equals(perm)) {
-                            hasCoarse = true;
-                        }
+            for (int i = 0; i < grantResults.length; i++) {
+                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    String perm = permissions[i];
+                    if (Manifest.permission.ACCESS_FINE_LOCATION.equals(perm)) {
+                        hasFine = true;
+                    } else if (Manifest.permission.ACCESS_COARSE_LOCATION.equals(perm)) {
+                        hasCoarse = true;
                     }
                 }
             }
@@ -594,6 +681,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // ========= Weather networking & parsing =========
 
     private void fetchWeather(final double lat, final double lon) {
+        String cacheKey = String.format(Locale.US, "%.3f,%.3f", lat, lon);
+        long now = System.currentTimeMillis();
+        if (lastJsonWeather != null
+                && lastWeatherKey != null
+                && lastWeatherKey.equals(cacheKey)
+                && (now - lastWeatherFetchMs) < WEATHER_CACHE_WINDOW_MS) {
+            String[] texts = parseWeatherJson(lastJsonWeather);
+            if (texts != null) {
+                textWeatherNow.setText(texts[0]);
+                textWeatherRange.setText(texts[1]);
+                if (textWind != null) {
+                    textWind.setText(texts[2]);
+                }
+                textPrecip.setText(texts[3]);
+                return;
+            }
+        }
+
         textWeatherNow.setText(getString(R.string.weather_loading));
         textWeatherRange.setText(getString(R.string.weather_next_loading));
         if (textWind != null) {
@@ -601,107 +706,90 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         textPrecip.setText(getString(R.string.precip_loading));
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                HttpURLConnection connection = null;
-                try {
-                    // Open-Meteo: hourly temp + precipitation + weathercode
-                    String urlStr =
-                            "https://api.open-meteo.com/v1/forecast"
-                            + "?latitude=" + lat
-                            + "&longitude=" + lon
-                            + "&hourly=temperature_2m,precipitation,weathercode,winddirection_10m"
-                            + "&current_weather=true"
-                            + "&timezone=auto";
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            try {
+                // Open-Meteo: hourly temp + precipitation + weathercode + extra data for SunActivity
+                String urlStr =
+                        "https://api.open-meteo.com/v1/forecast"
+                                + "?latitude=" + lat
+                                + "&longitude=" + lon
+                                + "&hourly=temperature_2m,precipitation,weathercode,winddirection_10m,cloudcover,sunshine_duration,is_day"
+                                + "&daily=sunrise,sunset,windgusts_10m_max"
+                                + "&current_weather=true"
+                                + "&timezone=auto";
 
-                    URL url = new URL(urlStr);
-                    connection = (HttpURLConnection) url.openConnection();
-                    connection.setConnectTimeout(10000);
-                    connection.setReadTimeout(10000);
-                    connection.setRequestMethod("GET");
+                URL url = new URL(urlStr);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.setRequestMethod("GET");
 
-                    InputStream is = connection.getInputStream();
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-                    StringBuilder sb = new StringBuilder();
-                    String line;
+                InputStream is = connection.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+                StringBuilder sb = new StringBuilder();
+                String line;
 
-                    while ((line = reader.readLine()) != null) {
-                        sb.append(line);
-                    }
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
 
-                    reader.close();
-                    final String json = sb.toString();
-                    lastJsonWeather = json;
+                reader.close();
+                final String json = sb.toString();
+                lastJsonWeather = json;
+                lastWeatherFetchMs = System.currentTimeMillis();
+                lastWeatherKey = cacheKey;
 
-                    // Parse JSON
-                    final String[] resultTexts = parseWeatherJson(json);
+                final String[] resultTexts = parseWeatherJson(json);
 
-                    // Update UI
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (resultTexts != null) {
-                                textWeatherNow.setText(resultTexts[0]);
-                                textWeatherRange.setText(resultTexts[1]);
-                                if (textWind != null) {
-                                    textWind.setText(resultTexts[2]);
-                                }
-                                textPrecip.setText(resultTexts[3]);
-                            } else {
-                                textWeatherNow.setText(getString(R.string.weather_parse_error));
-                                textWeatherRange.setText(getString(R.string.weather_range_label));
-                                if (textWind != null) {
-                                    textWind.setText(getString(R.string.wind_label));
-                                }
-                                textPrecip.setText(getString(R.string.precip_label));
-                            }
+                runOnUiThread(() -> {
+                    if (resultTexts != null) {
+                        textWeatherNow.setText(resultTexts[0]);
+                        textWeatherRange.setText(resultTexts[1]);
+                        if (textWind != null) {
+                            textWind.setText(resultTexts[2]);
                         }
-                    });
-
-                } catch (final Exception e) {
-                    e.printStackTrace();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            textWeatherNow.setText(getString(R.string.weather_error_with_message, e.getMessage()));
-                            textWeatherRange.setText(getString(R.string.weather_range_label));
-                            if (textWind != null) {
-                                textWind.setText(getString(R.string.wind_label));
-                            }
-                            textPrecip.setText(getString(R.string.precip_label));
+                        textPrecip.setText(resultTexts[3]);
+                    } else {
+                        textWeatherNow.setText(getString(R.string.weather_parse_error));
+                        textWeatherRange.setText(getString(R.string.weather_range_label));
+                        if (textWind != null) {
+                            textWind.setText(getString(R.string.wind_label));
                         }
-                    });
-                } finally {
-                    if (connection != null) {
-                        connection.disconnect();
+                        textPrecip.setText(getString(R.string.precip_label));
                     }
+                });
+
+            } catch (final Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    textWeatherNow.setText(getString(R.string.weather_error_with_message, e.getMessage()));
+                    textWeatherRange.setText(getString(R.string.weather_range_label));
+                    if (textWind != null) {
+                        textWind.setText(getString(R.string.wind_label));
+                    }
+                    textPrecip.setText(getString(R.string.precip_label));
+                });
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
                 }
             }
         }).start();
     }
 
-    /**
-     * Returns:
-     * [0] "Weather: X.X °C"
-     * [1] "Next 24h: min ... / max ..."
-     * [2] "Wind (24h): <summary>"
-     * [3] "Precipitation (24h): <summary>"
-     */
     private String[] parseWeatherJson(String json) {
         try {
             JSONObject root = new JSONObject(json);
 
-            // Current temp
             JSONObject current = root.getJSONObject("current_weather");
             double currentTemp = current.getDouble("temperature");
 
-            // Hourly temps + precipitation + weathercode
             JSONObject hourly = root.getJSONObject("hourly");
-            JSONArray temps      = hourly.getJSONArray("temperature_2m");
-            JSONArray precip     = hourly.getJSONArray("precipitation");
+            JSONArray temps = hourly.getJSONArray("temperature_2m");
+            JSONArray precip = hourly.getJSONArray("precipitation");
             JSONArray weathercode = hourly.getJSONArray("weathercode");
-            JSONArray windDir     = hourly.getJSONArray("winddirection_10m");
+            JSONArray windDir = hourly.getJSONArray("winddirection_10m");
 
             int count = Math.min(24,
                     Math.min(temps.length(),
@@ -754,19 +842,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             String nowText;
             String rangeText;
-            
+
             if (useImperial) {
-                // Convert Celsius to Fahrenheit
-                double currentTempF = (currentTemp * 9/5) + 32;
-                double minF = (min * 9/5) + 32;
-                double maxF = (max * 9/5) + 32;
-                
+                double currentTempF = (currentTemp * 9 / 5) + 32;
+                double minF = (min * 9 / 5) + 32;
+                double maxF = (max * 9 / 5) + 32;
+
                 nowText = String.format(
                         Locale.getDefault(),
                         "Weather: %.1f °F",
                         currentTempF
                 );
-    
+
                 rangeText = String.format(
                         Locale.getDefault(),
                         "Next 24h: min %.1f °F / max %.1f °F",
@@ -779,7 +866,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         "Weather: %.1f °C",
                         currentTemp
                 );
-    
+
                 rangeText = String.format(
                         Locale.getDefault(),
                         "Next 24h: min %.1f °C / max %.1f °C",
@@ -793,7 +880,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (!anyPrecip || sumPrecip < 0.05) {
                 precipText = "Precipitation (24h): none expected";
             } else {
-                // Intensity based on total precipitation
                 String intensity;
                 if (sumPrecip < 1.0) {
                     intensity = "very light";
@@ -805,7 +891,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     intensity = "heavy";
                 }
 
-                // Type classification
                 String type;
                 if (anyThunderCode) {
                     type = "rain with thunderstorms";
@@ -818,7 +903,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
 
                 if (useImperial) {
-                    // mm to inches
                     double inches = sumPrecip * 0.0393701;
                     precipText = String.format(
                             Locale.getDefault(),
@@ -851,7 +935,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     cardinal[prevailingIndex]
             );
 
-            return new String[]{ nowText, rangeText, windText, precipText };
+            return new String[]{nowText, rangeText, windText, precipText};
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -860,39 +944,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private boolean isSnowCode(int code) {
-        // Open-Meteo / WMO: 71,72,73,75,77,85,86 are snow-related
         return code == 71 || code == 73 || code == 75 || code == 77
                 || code == 85 || code == 86;
     }
 
     private boolean isThunderCode(int code) {
-        // Thunderstorms
         return code == 95 || code == 96 || code == 99;
     }
 
     private boolean isFreezingCode(int code) {
-        // Freezing drizzle / rain
         return code == 56 || code == 57 || code == 66 || code == 67;
     }
-
-    // ========= Level (accelerometer) =========
 
     @Override
     protected void onResume() {
         super.onResume();
         if (sensorManager != null && accelerometer != null) {
-            sensorManager.registerListener(
-                    this,
-                    accelerometer,
-                    SensorManager.SENSOR_DELAY_UI
-            );
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
         }
-        if (sensorManager != null && magnetometer != null) {
-            sensorManager.registerListener(
-                    this,
-                    magnetometer,
-                    SensorManager.SENSOR_DELAY_UI
-            );
+        updateSensorRegistration();
+    }
+
+    private void updateSensorRegistration() {
+        if (sensorManager == null || magnetometer == null) {
+            return;
+        }
+        sensorManager.unregisterListener(this, magnetometer);
+        if (showCompass) {
+            sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_UI);
         }
     }
 
@@ -902,14 +981,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
+        cancelPendingLocationRequests();
+        if (flashlightOn) {
+            turnOffFlashlight();
+            switchFlashlight.setChecked(false);
+        }
     }
-    
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putFloat(STATE_BUMP_HEIGHT, lastBumpHeightMm);
         outState.putBoolean(STATE_BUMP_ROLL, compensationAppliesToRoll);
-        outState.putFloat(STATE_BUMP_DIR, compensationDirection);
     }
 
     @Override
@@ -937,7 +1020,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             updateTiltAndCompass();
         }
     }
-    
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // No action needed
+    }
+
     private void updateTiltAndCompass() {
         if (!showCompass && hasAccel) {
             float ax = accelReading[0];
@@ -959,16 +1047,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 smoothNormX += TILT_ALPHA * (normX - smoothNormX);
                 smoothNormY += TILT_ALPHA * (normY - smoothNormY);
             }
-            
-            // Apply camera bump compensation if provided
+
             float offsetX = 0f;
             float offsetY = 0f;
             if (compensationMagnitude > 0f) {
+                float sign = Math.signum(lastBumpHeightMm);
                 if (compensationAppliesToRoll) {
-                    float sign = compensationDirection;
                     offsetX = sign * compensationMagnitude;
                 } else {
-                    float sign = compensationDirection;
                     offsetY = sign * compensationMagnitude;
                 }
             }
@@ -981,7 +1067,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
 
             double pitchDeg = -Math.asin(adjustedY) * 180.0 / Math.PI;
-            double rollDeg  =  Math.asin(adjustedX) * 180.0 / Math.PI;
+            double rollDeg = Math.asin(adjustedX) * 180.0 / Math.PI;
 
             if (textTilt != null) {
                 String tiltText = String.format(
@@ -993,7 +1079,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 textTilt.setText(tiltText);
             }
         }
-        
+
         if (showCompass && hasAccel && hasMag && compassView != null) {
             float[] rotationMatrix = new float[9];
             float[] inclinationMatrix = new float[9];
@@ -1031,31 +1117,168 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
-    
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_SETTINGS && resultCode == RESULT_OK && data != null) {
             lastBumpHeightMm = data.getFloatExtra(SettingsActivity.EXTRA_HEIGHT_MM, 0f);
             compensationAppliesToRoll = data.getBooleanExtra(SettingsActivity.EXTRA_APPLIES_ROLL, false);
-            boolean invert = data.getBooleanExtra(SettingsActivity.EXTRA_INVERT, false);
-            compensationDirection = invert ? -1f : 1f;
-            compensationMagnitude = computeNormalizedOffset(lastBumpHeightMm, DEFAULT_SUPPORT_SPAN_MM);
+            compensationMagnitude = computeNormalizedOffset(Math.abs(lastBumpHeightMm), DEFAULT_SUPPORT_SPAN_MM);
+            useImperial = data.getBooleanExtra(SettingsActivity.EXTRA_USE_IMPERIAL, false);
+            useNightMode = data.getBooleanExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, false);
+
+            SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+            prefs.edit()
+                    .putFloat(PREF_BUMP_HEIGHT, lastBumpHeightMm)
+                    .putBoolean(PREF_BUMP_ROLL, compensationAppliesToRoll)
+                    .putBoolean(PREF_USE_IMPERIAL, useImperial)
+                    .putBoolean(PREF_USE_NIGHT_MODE, useNightMode)
+                    .apply();
             updateTiltAndCompass();
+            refreshAllDisplays();
+            applyNightMode();
         }
     }
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Not used
+    private void applyNightMode() {
+        if (levelView != null) {
+            levelView.setNightMode(useNightMode);
+        }
+
+        int highlightColor;
+        if (useNightMode) {
+            WindowManager.LayoutParams layout = getWindow().getAttributes();
+            layout.screenBrightness = 0.01f; // Dim the screen significantly
+            getWindow().setAttributes(layout);
+            findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
+            highlightColor = ContextCompat.getColor(this, R.color.red_500);
+        } else {
+            WindowManager.LayoutParams layout = getWindow().getAttributes();
+            layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE; // System default
+            getWindow().setAttributes(layout);
+            findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
+            highlightColor = ContextCompat.getColor(this, R.color.teal_200);
+        }
+
+        if (buttonRefresh != null) buttonRefresh.setTextColor(highlightColor);
+        if (buttonWeather != null) buttonWeather.setTextColor(highlightColor);
+        if (buttonExtraData != null) buttonExtraData.setTextColor(highlightColor);
+        if (buttonDonate != null) buttonDonate.setTextColor(highlightColor);
+        if (textSettingsLink != null) textSettingsLink.setTextColor(highlightColor);
+        if (weatherCredit != null) weatherCredit.setLinkTextColor(highlightColor);
     }
-    
+
     private void applyLowPass(float[] input, float[] output, float alpha) {
         for (int i = 0; i < input.length; i++) {
             output[i] += alpha * (input[i] - output[i]);
         }
     }
-    
+
+    private void requestSingleLocation(final boolean forWeather) {
+        cancelPendingLocationRequests();
+
+        if (fusedLocationClient == null && locationManager != null) {
+            boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            if (!gpsEnabled) {
+                if (forWeather) {
+                    textWeatherNow.setText(getString(R.string.weather_gps_disabled));
+                    textPrecip.setText(getString(R.string.precip_label));
+                } else {
+                    textStatus.setText(getString(R.string.status_gps_disabled));
+                }
+                return;
+            }
+        }
+
+        if (fusedLocationClient != null) {
+            LocationRequest request = LocationRequest.create();
+            request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            request.setInterval(0);
+            request.setFastestInterval(0);
+            request.setNumUpdates(1);
+
+            pendingLocationCallback = new LocationCallback() {
+                @Override
+                public void onLocationResult(LocationResult locationResult) {
+                    cancelPendingLocationRequests();
+                    if (locationResult == null || locationResult.getLastLocation() == null) {
+                        fallbackLocation(forWeather);
+                        return;
+                    }
+                    Location location = locationResult.getLastLocation();
+                    handleLocationResult(forWeather, location);
+                }
+            };
+
+            try {
+                fusedLocationClient.requestLocationUpdates(request, pendingLocationCallback, Looper.getMainLooper());
+                pendingLocationTimeout = () -> {
+                    cancelPendingLocationRequests();
+                    fallbackLocation(forWeather);
+                };
+                mainHandler.postDelayed(pendingLocationTimeout, LOCATION_TIMEOUT_MS);
+                return;
+            } catch (SecurityException se) {
+                // Will fall back below
+            }
+        }
+
+        fallbackLocation(forWeather);
+    }
+
+    private void cancelPendingLocationRequests() {
+        if (fusedLocationClient != null && pendingLocationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(pendingLocationCallback);
+        }
+        pendingLocationCallback = null;
+        if (pendingLocationTimeout != null) {
+            mainHandler.removeCallbacks(pendingLocationTimeout);
+            pendingLocationTimeout = null;
+        }
+    }
+
+    private void fallbackLocation(final boolean forWeather) {
+        if (locationManager == null) {
+            if (forWeather) {
+                textWeatherNow.setText(getString(R.string.weather_no_location_manager));
+                textPrecip.setText(getString(R.string.precip_label));
+            } else {
+                textStatus.setText(getString(R.string.status_no_location_manager));
+            }
+            return;
+        }
+
+        boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if (!gpsEnabled) {
+            if (forWeather) {
+                textWeatherNow.setText(getString(R.string.weather_gps_disabled));
+                textPrecip.setText(getString(R.string.precip_label));
+            } else {
+                textStatus.setText(getString(R.string.status_gps_disabled));
+            }
+            return;
+        }
+
+        locationManager.requestSingleUpdate(
+                LocationManager.GPS_PROVIDER,
+                location -> handleLocationResult(forWeather, location),
+                Looper.getMainLooper()
+        );
+    }
+
+    private void handleLocationResult(boolean forWeather, Location location) {
+        if (location == null) {
+            return;
+        }
+        cachedLocation = location;
+        if (forWeather) {
+            fetchWeather(location.getLatitude(), location.getLongitude());
+        } else {
+            updateElevation(location);
+        }
+    }
+
     private float computeNormalizedOffset(float heightMm, float spanMm) {
         float denom = (float) Math.sqrt(heightMm * heightMm + spanMm * spanMm);
         if (denom == 0f) {
@@ -1064,13 +1287,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float normalized = heightMm / denom;
         return clampUnit(normalized);
     }
-    
+
     private float clampUnit(float value) {
         if (value > 1f) return 1f;
         if (value < -1f) return -1f;
         return value;
     }
-    
+
     private int directionBucketIndex(double deg) {
         // Normalize degrees to [0,360)
         double normalized = ((deg % 360.0) + 360.0) % 360.0;
