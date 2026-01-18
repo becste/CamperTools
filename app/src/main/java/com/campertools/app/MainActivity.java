@@ -26,6 +26,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -160,12 +162,38 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private LocationCallback pendingLocationCallback;
     private Runnable pendingLocationTimeout;
+    private ActivityResultLauncher<Intent> settingsLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_main);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        settingsLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Intent data = result.getData();
+                        lastBumpHeightMm = data.getFloatExtra(SettingsActivity.EXTRA_HEIGHT_MM, 0f);
+                        compensationAppliesToRoll = data.getBooleanExtra(SettingsActivity.EXTRA_APPLIES_ROLL, false);
+                        compensationMagnitude = computeNormalizedOffset(Math.abs(lastBumpHeightMm), DEFAULT_SUPPORT_SPAN_MM);
+                        useImperial = data.getBooleanExtra(SettingsActivity.EXTRA_USE_IMPERIAL, false);
+                        useNightMode = data.getBooleanExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, false);
+
+                        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+                        prefs.edit()
+                                .putFloat(PREF_BUMP_HEIGHT, lastBumpHeightMm)
+                                .putBoolean(PREF_BUMP_ROLL, compensationAppliesToRoll)
+                                .putBoolean(PREF_USE_IMPERIAL, useImperial)
+                                .putBoolean(PREF_USE_NIGHT_MODE, useNightMode)
+                                .apply();
+                        updateTiltAndCompass();
+                        refreshAllDisplays();
+                        applyNightMode();
+                    }
+                }
+        );
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         if (savedInstanceState != null) {
@@ -527,7 +555,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             .setPurchaseToken(purchase.getPurchaseToken())
                             .build();
 
-            billingClient.consumeAsync(consumeParams, (billingResult, purchaseToken) -> runOnUiThread(() -> Toast.makeText(MainActivity.this, R.string.donation_success, Toast.LENGTH_LONG).show()));
+            billingClient.consumeAsync(consumeParams, (billingResult, purchaseToken) -> runOnUiThread(() -> {
+                if (isFinishing()) return;
+                Toast.makeText(MainActivity.this, R.string.donation_success, Toast.LENGTH_LONG).show();
+            }));
         }
     }
 
@@ -569,7 +600,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         intent.putExtra(SettingsActivity.EXTRA_APPLIES_ROLL, compensationAppliesToRoll);
         intent.putExtra(SettingsActivity.EXTRA_USE_IMPERIAL, useImperial);
         intent.putExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, useNightMode);
-        startActivityForResult(intent, REQUEST_SETTINGS);
+        settingsLauncher.launch(intent);
     }
 
     @SuppressWarnings("MissingPermission")
@@ -615,13 +646,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             double feet = altitude * 3.28084;
             elevationString = String.format(
                     Locale.getDefault(),
-                    "Elevation: %.0f ft",
+                    getString(R.string.elevation_format_imperial),
                     feet
             );
         } else {
             elevationString = String.format(
                     Locale.getDefault(),
-                    "Elevation: %.0f m",
+                    getString(R.string.elevation_format_metric),
                     altitude
             );
         }
@@ -743,6 +774,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 final String[] resultTexts = parseWeatherJson(json);
 
                 runOnUiThread(() -> {
+                    if (isFinishing()) return;
                     if (resultTexts != null) {
                         textWeatherNow.setText(resultTexts[0]);
                         textWeatherRange.setText(resultTexts[1]);
@@ -763,6 +795,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             } catch (final Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> {
+                    if (isFinishing()) return;
                     textWeatherNow.setText(getString(R.string.weather_error_with_message, e.getMessage()));
                     textWeatherRange.setText(getString(R.string.weather_range_label));
                     if (textWind != null) {
@@ -861,26 +894,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 nowText = String.format(
                         Locale.getDefault(),
-                        "Weather: %.1f °F",
+                        getString(R.string.weather_now_format_imperial),
                         currentTempF
                 );
 
                 rangeText = String.format(
                         Locale.getDefault(),
-                        "Next 24h: min %.1f °F / max %.1f °F",
+                        getString(R.string.weather_range_format_imperial),
                         minF,
                         maxF
                 );
             } else {
                 nowText = String.format(
                         Locale.getDefault(),
-                        "Weather: %.1f °C",
+                        getString(R.string.weather_now_format_metric),
                         currentTemp
                 );
 
                 rangeText = String.format(
                         Locale.getDefault(),
-                        "Next 24h: min %.1f °C / max %.1f °C",
+                        getString(R.string.weather_range_format_metric),
                         min,
                         max
                 );
@@ -889,7 +922,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             String windText;
             String precipText;
             if (!anyPrecip || sumPrecip < 0.05) {
-                precipText = "Precipitation (24h): none expected";
+                precipText = getString(R.string.precip_none);
             } else {
                 String intensity;
                 if (sumPrecip < 1.0) {
@@ -917,7 +950,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     double inches = sumPrecip * 0.0393701;
                     precipText = String.format(
                             Locale.getDefault(),
-                            "Precipitation (24h): %s %s, ~%.2f in expected",
+                            getString(R.string.precip_format_imperial),
                             intensity,
                             type,
                             inches
@@ -925,7 +958,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 } else {
                     precipText = String.format(
                             Locale.getDefault(),
-                            "Precipitation (24h): %s %s, ~%.1f mm expected",
+                            getString(R.string.precip_format_metric),
                             intensity,
                             type,
                             sumPrecip
@@ -942,7 +975,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             String[] cardinal = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
             windText = String.format(
                     Locale.getDefault(),
-                    "Wind (24h): %s (most common direction)",
+                    getString(R.string.wind_format),
                     cardinal[prevailingIndex]
             );
 
@@ -1083,7 +1116,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (textTilt != null) {
                 String tiltText = String.format(
                         Locale.getDefault(),
-                        "Tilt: %.1f° / %.1f°",
+                        getString(R.string.tilt_format),
                         pitchDeg,
                         rollDeg
                 );
@@ -1120,7 +1153,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (textTilt != null) {
                     String headingText = String.format(
                             Locale.getDefault(),
-                            "Heading: %.0f°",
+                            getString(R.string.heading_format),
                             displayHeading
                     );
                     textTilt.setText(headingText);
@@ -1129,28 +1162,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_SETTINGS && resultCode == RESULT_OK && data != null) {
-            lastBumpHeightMm = data.getFloatExtra(SettingsActivity.EXTRA_HEIGHT_MM, 0f);
-            compensationAppliesToRoll = data.getBooleanExtra(SettingsActivity.EXTRA_APPLIES_ROLL, false);
-            compensationMagnitude = computeNormalizedOffset(Math.abs(lastBumpHeightMm), DEFAULT_SUPPORT_SPAN_MM);
-            useImperial = data.getBooleanExtra(SettingsActivity.EXTRA_USE_IMPERIAL, false);
-            useNightMode = data.getBooleanExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, false);
-
-            SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-            prefs.edit()
-                    .putFloat(PREF_BUMP_HEIGHT, lastBumpHeightMm)
-                    .putBoolean(PREF_BUMP_ROLL, compensationAppliesToRoll)
-                    .putBoolean(PREF_USE_IMPERIAL, useImperial)
-                    .putBoolean(PREF_USE_NIGHT_MODE, useNightMode)
-                    .apply();
-            updateTiltAndCompass();
-            refreshAllDisplays();
-            applyNightMode();
-        }
-    }
 
     private void applyNightMode() {
         if (levelView != null) {

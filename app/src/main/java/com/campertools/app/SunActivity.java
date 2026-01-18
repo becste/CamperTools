@@ -66,13 +66,13 @@ public class SunActivity extends AppCompatActivity {
             if (cachedLocation != null) {
                 fetchSunData(cachedLocation);
             } else {
-                textSunStatus.setText("No location fix. Please refresh GPS on the main screen.");
+                textSunStatus.setText(getString(R.string.no_location_fix));
             }
         }
     }
 
     private void fetchSunData(Location location) {
-        textSunStatus.setText("Fetching detailed weather data...");
+        textSunStatus.setText(getString(R.string.fetching_weather));
         new Thread(() -> {
             try {
                 // Fetch daily wind gusts, and hourly cloudcover, sunshine_duration, is_day
@@ -97,11 +97,17 @@ public class SunActivity extends AppCompatActivity {
                 reader.close();
                 final String json = sb.toString();
 
-                runOnUiThread(() -> parseAndDisplaySunData(json));
+                runOnUiThread(() -> {
+                    if (isFinishing()) return;
+                    parseAndDisplaySunData(json);
+                });
 
             } catch (Exception e) {
                 e.printStackTrace();
-                runOnUiThread(() -> textSunStatus.setText("Error fetching weather data."));
+                runOnUiThread(() -> {
+                    if (isFinishing()) return;
+                    textSunStatus.setText(getString(R.string.error_fetching_weather));
+                });
             }
         }).start();
     }
@@ -132,8 +138,8 @@ public class SunActivity extends AppCompatActivity {
                 Date sunsetDate = isoFormat.parse(sunsetISO);
 
                 SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
-                textSunrise.setText("Sunrise: " + timeFormat.format(sunriseDate));
-                textSunset.setText("Sunset: " + timeFormat.format(sunsetDate));
+                textSunrise.setText(String.format(getString(R.string.sunrise_label), timeFormat.format(sunriseDate)));
+                textSunset.setText(String.format(getString(R.string.sunset_label), timeFormat.format(sunsetDate)));
                 textSunStatus.setText("");
                 
                 // Wind Gusts
@@ -142,9 +148,9 @@ public class SunActivity extends AppCompatActivity {
                     if (useImperial) {
                         // km/h to mph
                         double maxGustMph = maxGustKmh * 0.621371;
-                        textWindGusts.setText(String.format(Locale.getDefault(), "Max Gusts (24h): %.1f mph", maxGustMph));
+                        textWindGusts.setText(String.format(Locale.getDefault(), getString(R.string.max_gusts_format_imperial), maxGustMph));
                     } else {
-                        textWindGusts.setText(String.format(Locale.getDefault(), "Max Gusts (24h): %.1f km/h", maxGustKmh));
+                        textWindGusts.setText(String.format(Locale.getDefault(), getString(R.string.max_gusts_format_metric), maxGustKmh));
                     }
                 }
 
@@ -175,7 +181,7 @@ public class SunActivity extends AppCompatActivity {
                         if (percent > 100) percent = 100;
                     }
 
-                    textSunshine.setText(String.format(Locale.getDefault(), "Sunshine (next 24h): %.1f hrs (%.0f%%)", sunshineHours, percent));
+                    textSunshine.setText(String.format(Locale.getDefault(), getString(R.string.sunshine_rolling_format), sunshineHours, percent));
                 }
 
                 // Cloud Cover (Avg next 24h)
@@ -190,14 +196,14 @@ public class SunActivity extends AppCompatActivity {
                             sumCloud += cloudCoverArray.getDouble(idx);
                         }
                         double avgCloud = sumCloud / loopCount;
-                        textCloudCover.setText(String.format(Locale.getDefault(), "Cloud Cover (24h avg): %.0f%%", avgCloud));
+                        textCloudCover.setText(String.format(Locale.getDefault(), getString(R.string.cloud_cover_format), avgCloud));
                     }
                 }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            textSunStatus.setText("Error parsing detailed data.");
+            textSunStatus.setText(getString(R.string.error_parsing_weather));
         }
     }
 
