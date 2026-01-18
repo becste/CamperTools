@@ -2,9 +2,12 @@ package com.campertools.app;
 
 import android.location.Location;
 import android.os.Bundle;
+import android.view.WindowManager;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -30,6 +33,7 @@ public class SunActivity extends AppCompatActivity {
 
     private static String lastJsonSunData;
     private boolean useImperial = false;
+    private boolean useNightMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +42,7 @@ public class SunActivity extends AppCompatActivity {
 
         android.content.SharedPreferences prefs = getSharedPreferences("campertools_prefs", MODE_PRIVATE);
         useImperial = prefs.getBoolean("pref_use_imperial", false);
+        useNightMode = prefs.getBoolean("pref_use_night_mode", false);
 
         textSunrise = findViewById(R.id.textSunrise);
         textSunset = findViewById(R.id.textSunset);
@@ -46,6 +51,8 @@ public class SunActivity extends AppCompatActivity {
         textCloudCover = findViewById(R.id.textCloudCover);
         textSunStatus = findViewById(R.id.textSunStatus);
         textBack = findViewById(R.id.textBack);
+
+        applyNightMode();
 
         textBack.setOnClickListener(v -> finish());
 
@@ -192,5 +199,32 @@ public class SunActivity extends AppCompatActivity {
             e.printStackTrace();
             textSunStatus.setText("Error parsing detailed data.");
         }
+    }
+
+    private void applyNightMode() {
+        int backColor;
+        int textColor = ContextCompat.getColor(this, R.color.primary_text);
+
+        if (useNightMode) {
+            WindowManager.LayoutParams layout = getWindow().getAttributes();
+            layout.screenBrightness = 0.01f; // Dim the screen
+            getWindow().setAttributes(layout);
+            findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
+            backColor = ContextCompat.getColor(this, R.color.red_500);
+        } else {
+            WindowManager.LayoutParams layout = getWindow().getAttributes();
+            layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE; // System default
+            getWindow().setAttributes(layout);
+            findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
+            backColor = ContextCompat.getColor(this, R.color.teal_200);
+        }
+
+        if (textSunrise != null) textSunrise.setTextColor(textColor);
+        if (textSunset != null) textSunset.setTextColor(textColor);
+        if (textWindGusts != null) textWindGusts.setTextColor(textColor);
+        if (textSunshine != null) textSunshine.setTextColor(textColor);
+        if (textCloudCover != null) textCloudCover.setTextColor(textColor);
+        if (textSunStatus != null) textSunStatus.setTextColor(textColor);
+        if (textBack != null) textBack.setTextColor(backColor);
     }
 }

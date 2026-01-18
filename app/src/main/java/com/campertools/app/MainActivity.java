@@ -791,28 +791,37 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             JSONArray weathercode = hourly.getJSONArray("weathercode");
             JSONArray windDir = hourly.getJSONArray("winddirection_10m");
 
-            int count = Math.min(24,
-                    Math.min(temps.length(),
+            // Calculate rolling 24h indices
+            java.util.Calendar calendar = java.util.Calendar.getInstance();
+            int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+            
+            // Ensure we don't go out of bounds. Open-Meteo usually provides 7 days.
+            int maxLen = Math.min(temps.length(),
                             Math.min(precip.length(),
-                                    Math.min(weathercode.length(), windDir.length()))));
-            if (count == 0) {
+                                    Math.min(weathercode.length(), windDir.length())));
+                                    
+            int startIdx = currentHour;
+            int endIdx = Math.min(maxLen, startIdx + 24);
+            
+            if (endIdx <= startIdx) {
                 return null;
             }
 
-            double min = temps.getDouble(0);
-            double max = temps.getDouble(0);
-            double sumTemp = temps.getDouble(0);
-            double sumPrecip = precip.getDouble(0);
-            double firstWindDeg = windDir.getDouble(0);
+            double min = temps.getDouble(startIdx);
+            double max = temps.getDouble(startIdx);
+            double sumTemp = 0;
+            double sumPrecip = 0;
+            // Use first hour of the window for initial wind bucket? Or simple count.
+            // Let's just accumulate.
 
-            boolean anyPrecip = precip.getDouble(0) > 0.05;
-            boolean anySnowCode = isSnowCode(weathercode.getInt(0));
-            boolean anyThunderCode = isThunderCode(weathercode.getInt(0));
-            boolean anyFreezingCode = isFreezingCode(weathercode.getInt(0));
+            boolean anyPrecip = false;
+            boolean anySnowCode = false;
+            boolean anyThunderCode = false;
+            boolean anyFreezingCode = false;
             int[] windBuckets = new int[8]; // N, NE, E, SE, S, SW, W, NW
-            windBuckets[directionBucketIndex(firstWindDeg)]++;
 
-            for (int i = 1; i < count; i++) {
+            int count = 0;
+            for (int i = startIdx; i < endIdx; i++) {
                 double t = temps.getDouble(i);
                 double p = precip.getDouble(i);
                 int code = weathercode.getInt(i);
@@ -836,8 +845,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (isFreezingCode(code)) {
                     anyFreezingCode = true;
                 }
+                count++;
             }
 
+            if (count == 0) return null;
             double avgTemp = sumTemp / count;
 
             String nowText;
