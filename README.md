@@ -17,7 +17,7 @@
 
 ## 📱 Screenshots
 
-*(Add screenshots here)*
+![CamperTools Main Screen](screenshot_main.png)
 
 ## 🛠️ Tech Stack
 
