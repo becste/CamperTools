@@ -48,7 +48,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is open-source.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**. 
+
+This means you are free to:
+*   **Share** — copy and redistribute the material in any medium or format.
+*   **Adapt** — remix, transform, and build upon the material.
+
+Under the following terms:
+*   **Attribution** — You must give appropriate credit.
+*   **NonCommercial** — You may **not** use the material for commercial purposes (you cannot sell this code or apps derived from it).
+
+See the [LICENSE](LICENSE) file for details.
 
 ---
 *Weather data provided by [Open-Meteo.com](https://open-meteo.com/)*
