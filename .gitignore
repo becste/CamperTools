@@ -17,3 +17,4 @@ local.properties
 # Android Studio / Intellij
 .idea/
 app/build/
+*.hprof
