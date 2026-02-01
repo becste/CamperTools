@@ -10,8 +10,8 @@ android {
         applicationId "com.campertools.app"
         minSdk 21
         targetSdk 35
-        versionCode 17
-        versionName "2.6"
+        versionCode 19
+        versionName "2.8"
     }
 
     compileOptions {
@@ -28,7 +28,7 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
     // MaterialSwitch requires Material Components 1.12.0+
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'com.android.billingclient:billing:7.1.1'

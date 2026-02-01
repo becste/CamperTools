@@ -63,6 +63,21 @@ public class CompassView extends View {
         southPath = new Path();
     }
 
+    public void setNightMode(boolean isNightMode) {
+        int color;
+        if (isNightMode) {
+            color = ContextCompat.getColor(getContext(), R.color.red_500);
+        } else {
+            color = ContextCompat.getColor(getContext(), R.color.secondary_text);
+        }
+
+        circlePaint.setColor(color);
+        southPaint.setColor(color);
+        textPaint.setColor(color);
+        
+        invalidate();
+    }
+
     /**
      * Set compass direction in degrees (0 = North)
      */

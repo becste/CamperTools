@@ -14,11 +14,19 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.util.Locale;
+
+import androidx.core.content.ContextCompat;
+import android.view.WindowManager;
+import android.widget.RadioButton;
 
 public class SettingsActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -30,8 +38,12 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
     private static final float DEFAULT_SUPPORT_SPAN_MM = 70f;
     private static final float ALPHA = 0.1f; // Filter factor
 
+    private TextView textLevelHeader;
+    private TextView textUnitsHeader;
     private EditText inputCameraBump;
     private RadioGroup radioBumpAxis;
+    private RadioButton radioBumpAxisPitch;
+    private RadioButton radioBumpAxisRoll;
     private Button buttonAutoCalibrate;
     private SwitchMaterial switchUnits;
     private SwitchMaterial switchNightMode;
@@ -47,10 +59,21 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_settings);
 
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout), (v, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
+
+        textLevelHeader = findViewById(R.id.textLevelHeader);
+        textUnitsHeader = findViewById(R.id.textUnitsHeader);
         inputCameraBump = findViewById(R.id.inputCameraBump);
         radioBumpAxis = findViewById(R.id.radioBumpAxis);
+        radioBumpAxisPitch = findViewById(R.id.radioBumpAxisPitch);
+        radioBumpAxisRoll = findViewById(R.id.radioBumpAxisRoll);
         buttonAutoCalibrate = findViewById(R.id.buttonAutoCalibrate);
         switchUnits = findViewById(R.id.switchUnits);
         switchNightMode = findViewById(R.id.switchNightMode);
@@ -81,6 +104,7 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
             switchNightMode.setChecked(useNightMode);
             switchNightMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 useNightMode = isChecked;
+                applyNightMode();
             });
         }
 
@@ -94,6 +118,51 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         if (buttonAutoCalibrate != null) {
             buttonAutoCalibrate.setOnClickListener(v -> performAutoCalibration());
         }
+
+        applyNightMode();
+    }
+
+    private void applyNightMode() {
+        int textColor;
+        int backgroundColor;
+        int hintColor;
+
+        if (useNightMode) {
+            WindowManager.LayoutParams layout = getWindow().getAttributes();
+            layout.screenBrightness = 0.01f; // Dim the screen
+            getWindow().setAttributes(layout);
+            
+            textColor = ContextCompat.getColor(this, R.color.red_500);
+            backgroundColor = ContextCompat.getColor(this, R.color.background_color);
+            hintColor = ContextCompat.getColor(this, R.color.red_500); // Or slightly dimmer
+        } else {
+            WindowManager.LayoutParams layout = getWindow().getAttributes();
+            layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+            getWindow().setAttributes(layout);
+
+            textColor = ContextCompat.getColor(this, R.color.primary_text);
+            backgroundColor = ContextCompat.getColor(this, R.color.background_color);
+            hintColor = ContextCompat.getColor(this, R.color.secondary_text);
+        }
+        
+        findViewById(android.R.id.content).setBackgroundColor(backgroundColor);
+
+        if (textLevelHeader != null) textLevelHeader.setTextColor(textColor);
+        if (textUnitsHeader != null) textUnitsHeader.setTextColor(textColor);
+        if (inputCameraBump != null) {
+            inputCameraBump.setTextColor(textColor);
+            inputCameraBump.setHintTextColor(hintColor);
+        }
+        if (radioBumpAxisPitch != null) radioBumpAxisPitch.setTextColor(textColor);
+        if (radioBumpAxisRoll != null) radioBumpAxisRoll.setTextColor(textColor);
+        
+        if (switchUnits != null) switchUnits.setTextColor(textColor);
+        if (switchNightMode != null) switchNightMode.setTextColor(textColor);
+        
+        // Buttons usually have their own style, but we can tint their text if needed
+        // For standard Buttons, setTextColor works.
+        if (buttonAutoCalibrate != null) buttonAutoCalibrate.setTextColor(textColor);
+        if (buttonBack != null) buttonBack.setTextColor(textColor);
     }
 
     private void saveSettings() {

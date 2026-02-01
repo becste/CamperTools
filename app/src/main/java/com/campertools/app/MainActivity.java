@@ -26,12 +26,16 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -106,7 +110,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     // Flashlight UI
     private SwitchMaterial switchFlashlight;
+    private SwitchMaterial switchShake;
     private SeekBar seekBrightness;
+    
+    // Shake detection
+    private boolean shakeEnabled = false;
+    private long lastShakeTime = 0;
+    private static final float SHAKE_THRESHOLD_GRAVITY = 2.7F; // g-force required
+    private static final int SHAKE_DEBOUNCE_MS = 1000;
 
     // Donation
     private TextView buttonDonate;
@@ -167,7 +178,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
         setContentView(R.layout.layout_main);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout), (v, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         settingsLauncher = registerForActivityResult(
@@ -231,7 +250,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         // Flashlight
         switchFlashlight = findViewById(R.id.switchFlashlight);
+        switchShake = findViewById(R.id.switchShake);
         seekBrightness = findViewById(R.id.seekBrightness);
+
+        if (switchShake != null) {
+            switchShake.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                shakeEnabled = isChecked;
+                if (shakeEnabled) {
+                    Toast.makeText(MainActivity.this, "Shake enabled", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
 
         // Donate UI
         buttonDonate = (TextView) findViewById(R.id.buttonDonate);
@@ -796,7 +825,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 e.printStackTrace();
                 runOnUiThread(() -> {
                     if (isFinishing()) return;
-                    textWeatherNow.setText(getString(R.string.weather_error_with_message, e.getMessage()));
+                    textWeatherNow.setText(getString(R.string.weather_network_error));
                     textWeatherRange.setText(getString(R.string.weather_range_label));
                     if (textWind != null) {
                         textWind.setText(getString(R.string.wind_label));
@@ -1043,6 +1072,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onSensorChanged(SensorEvent event) {
         int type = event.sensor.getType();
         if (type == Sensor.TYPE_ACCELEROMETER) {
+            // Shake detection
+            if (shakeEnabled) {
+                float x = event.values[0];
+                float y = event.values[1];
+                float z = event.values[2];
+                float gX = x / SensorManager.GRAVITY_EARTH;
+                float gY = y / SensorManager.GRAVITY_EARTH;
+                float gZ = z / SensorManager.GRAVITY_EARTH;
+                // gForce will be close to 1 when there is no movement.
+                double gForce = Math.sqrt(gX * gX + gY * gY + gZ * gZ);
+
+                if (gForce > SHAKE_THRESHOLD_GRAVITY) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastShakeTime > SHAKE_DEBOUNCE_MS) {
+                        lastShakeTime = now;
+                        // Toggle flashlight
+                        if (flashlightOn) {
+                            switchFlashlight.setChecked(false); // This triggers the listener which turns it off
+                        } else {
+                            switchFlashlight.setChecked(true); // This triggers the listener which turns it on
+                        }
+                    }
+                }
+            }
+
             if (!accelInitialized) {
                 System.arraycopy(event.values, 0, filteredAccel, 0, filteredAccel.length);
                 accelInitialized = true;
@@ -1167,21 +1221,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (levelView != null) {
             levelView.setNightMode(useNightMode);
         }
+        if (compassView != null) {
+            compassView.setNightMode(useNightMode);
+        }
 
         int highlightColor;
+        int mainTextColor;
+
         if (useNightMode) {
             WindowManager.LayoutParams layout = getWindow().getAttributes();
             layout.screenBrightness = 0.01f; // Dim the screen significantly
             getWindow().setAttributes(layout);
             findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
             highlightColor = ContextCompat.getColor(this, R.color.red_500);
+            mainTextColor = ContextCompat.getColor(this, R.color.red_500);
         } else {
             WindowManager.LayoutParams layout = getWindow().getAttributes();
             layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE; // System default
             getWindow().setAttributes(layout);
             findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
             highlightColor = ContextCompat.getColor(this, R.color.teal_200);
+            mainTextColor = ContextCompat.getColor(this, R.color.primary_text);
         }
+
+        // Apply text colors
+        if (textElevation != null) textElevation.setTextColor(mainTextColor);
+        if (textStatus != null) textStatus.setTextColor(mainTextColor);
+        if (textWeatherNow != null) textWeatherNow.setTextColor(mainTextColor);
+        if (textWeatherRange != null) textWeatherRange.setTextColor(mainTextColor);
+        if (textWind != null) textWind.setTextColor(mainTextColor);
+        if (textPrecip != null) textPrecip.setTextColor(mainTextColor);
+        if (textTilt != null) textTilt.setTextColor(mainTextColor);
+        
+        if (switchCompass != null) switchCompass.setTextColor(mainTextColor);
+        if (switchFlashlight != null) switchFlashlight.setTextColor(mainTextColor);
+        if (switchShake != null) switchShake.setTextColor(mainTextColor);
 
         if (buttonRefresh != null) buttonRefresh.setTextColor(highlightColor);
         if (buttonWeather != null) buttonWeather.setTextColor(highlightColor);
@@ -1189,6 +1263,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (buttonDonate != null) buttonDonate.setTextColor(highlightColor);
         if (textSettingsLink != null) textSettingsLink.setTextColor(highlightColor);
         if (weatherCredit != null) weatherCredit.setLinkTextColor(highlightColor);
+        if (weatherCredit != null) weatherCredit.setTextColor(mainTextColor);
     }
 
     private void applyLowPass(float[] input, float[] output, float alpha) {

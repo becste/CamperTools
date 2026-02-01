@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -126,13 +127,26 @@
         android:text="@string/tilt_label"
         android:paddingTop="4dp" />
 
-    <!-- Flashlight -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchFlashlight"
+    <!-- Flashlight Controls -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:text="@string/flashlight_toggle" />
+        android:orientation="horizontal">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchFlashlight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/flashlight_toggle" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchShake"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:text="@string/shake_toggle" />
+    </LinearLayout>
 
     <SeekBar
         android:id="@+id/seekBrightness"

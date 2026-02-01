@@ -81,15 +81,31 @@ public class LevelView extends View {
 
     public void setNightMode(boolean isNightMode) {
         int highlightColor;
+        int secondaryColor;
+
         if (isNightMode) {
             highlightColor = ContextCompat.getColor(getContext(), R.color.red_500);
+            secondaryColor = ContextCompat.getColor(getContext(), R.color.red_500); // Or a dimmer red if preferred
         } else {
             highlightColor = ContextCompat.getColor(getContext(), R.color.teal_200);
+            secondaryColor = ContextCompat.getColor(getContext(), R.color.secondary_text);
         }
+
         bubblePaint.setColor(highlightColor);
         bubblePaint.setAlpha(200);
         barBubblePaint.setColor(highlightColor);
         barBubblePaint.setAlpha(200);
+        
+        // Update other paints for night mode
+        circlePaint.setColor(secondaryColor);
+        barPaint.setColor(secondaryColor);
+        linePaint.setColor(secondaryColor);
+        // Keep alpha for linePaint
+        linePaint.setAlpha(150); 
+        
+        centerLinePaint.setColor(secondaryColor);
+        centerLinePaint.setAlpha(200);
+
         invalidate();
     }
 

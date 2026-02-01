@@ -31,19 +31,22 @@
     <string name="wind_loading">Wind (24h): …</string>
     <string name="status_gps_ok">GPS OK</string>
     <string name="permission_denied">Permission denied</string>
-    <string name="camera_bump_label">Camera bump compensation</string>
+    <string name="camera_bump_label">Level Calibration</string>
     <string name="camera_bump_hint">Height (mm or inches)</string>
     <string name="camera_bump_axis_pitch">Affects pitch (top/bottom)</string>
     <string name="camera_bump_axis_roll">Affects roll (left/right)</string>
     <string name="camera_bump_invalid">Enter a number</string>
-    <string name="auto_calibrate_button">Measure from current tilt</string>
+    <string name="auto_calibrate_button">Auto Calibrate</string>
     <string name="settings_title">Level Settings</string>
     <string name="open_settings">Settings</string>
     <string name="save_settings">Save</string>
-    <string name="back">Back</string>
-    <string name="extra_data_link">Extra data</string>
+    <string name="back">Done</string>
+    <string name="close_button">Close</string>
+    <string name="extra_data_link">More data</string>
     <string name="flashlight_toggle">Flashlight</string>
+    <string name="shake_toggle">Shake to Light</string>
     <string name="refresh_gps_button">Refresh GPS Coordinates</string>
+    <string name="units_appearance_label">Units &amp; Appearance</string>
     <string name="night_mode_toggle">Night Mode</string>
 
     <!-- Hardcoded string extractions -->
@@ -57,7 +60,7 @@
     <string name="precip_format_imperial">Precipitation (24h): %1$s %2$s, ~%3$.2f in expected</string>
     <string name="precip_format_metric">Precipitation (24h): %1$s %2$s, ~%3$.1f mm expected</string>
     <string name="wind_format">Wind (24h): %1$s (most common direction)</string>
-    <string name="tilt_format">Tilt: %1$.1f° / %2$.1f°</string>
+    <string name="tilt_format">Pitch: %1$.1f° Roll: %2$.1f°</string>
     <string name="heading_format">Heading: %.0f°</string>
     <string name="compass_unavailable">Compass sensor unavailable on this device</string>
     <string name="camera_permission_required">Camera permission is required for the flashlight</string>
@@ -73,4 +76,5 @@
     <string name="fetching_weather">Fetching detailed weather data…</string>
     <string name="error_fetching_weather">Error fetching weather data.</string>
     <string name="error_parsing_weather">Error parsing detailed data.</string>
+    <string name="weather_network_error">Network error</string>
 </resources>

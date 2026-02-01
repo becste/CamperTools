@@ -137,7 +137,8 @@ public class SunActivity extends AppCompatActivity {
                 Date sunriseDate = isoFormat.parse(sunriseISO);
                 Date sunsetDate = isoFormat.parse(sunsetISO);
 
-                SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
+                String timePattern = useImperial ? "h:mm a" : "HH:mm";
+                SimpleDateFormat timeFormat = new SimpleDateFormat(timePattern, Locale.getDefault());
                 textSunrise.setText(String.format(getString(R.string.sunrise_label), timeFormat.format(sunriseDate)));
                 textSunset.setText(String.format(getString(R.string.sunset_label), timeFormat.format(sunsetDate)));
                 textSunStatus.setText("");
@@ -209,7 +210,7 @@ public class SunActivity extends AppCompatActivity {
 
     private void applyNightMode() {
         int backColor;
-        int textColor = ContextCompat.getColor(this, R.color.primary_text);
+        int textColor;
 
         if (useNightMode) {
             WindowManager.LayoutParams layout = getWindow().getAttributes();
@@ -217,12 +218,14 @@ public class SunActivity extends AppCompatActivity {
             getWindow().setAttributes(layout);
             findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
             backColor = ContextCompat.getColor(this, R.color.red_500);
+            textColor = ContextCompat.getColor(this, R.color.red_500);
         } else {
             WindowManager.LayoutParams layout = getWindow().getAttributes();
             layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE; // System default
             getWindow().setAttributes(layout);
             findViewById(android.R.id.content).setBackgroundColor(ContextCompat.getColor(this, R.color.background_color));
             backColor = ContextCompat.getColor(this, R.color.teal_200);
+            textColor = ContextCompat.getColor(this, R.color.primary_text);
         }
 
         if (textSunrise != null) textSunrise.setTextColor(textColor);
