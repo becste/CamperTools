@@ -3,7 +3,7 @@
 ## Version 2.8 (Build 19)
 
 ### New Features
-- **Shake to Light:** Added a new toggle to enable turning the flashlight on/off by shaking the device.
+- **Shake to Light:** The flashlight can now be toggled on/off by shaking the device (automatically enabled).
 - **Enhanced Night Mode:** Night mode now turns all text and UI elements red to better preserve night vision.
 - **Pitch & Roll Display:** Tilt indicator now explicitly labels "Pitch" and "Roll" angles.
 

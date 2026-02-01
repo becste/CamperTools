@@ -110,11 +110,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     // Flashlight UI
     private SwitchMaterial switchFlashlight;
-    private SwitchMaterial switchShake;
     private SeekBar seekBrightness;
     
     // Shake detection
-    private boolean shakeEnabled = false;
+    private boolean shakeEnabled = true;
     private long lastShakeTime = 0;
     private static final float SHAKE_THRESHOLD_GRAVITY = 2.7F; // g-force required
     private static final int SHAKE_DEBOUNCE_MS = 1000;
@@ -250,17 +249,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         // Flashlight
         switchFlashlight = findViewById(R.id.switchFlashlight);
-        switchShake = findViewById(R.id.switchShake);
         seekBrightness = findViewById(R.id.seekBrightness);
 
-        if (switchShake != null) {
-            switchShake.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                shakeEnabled = isChecked;
-                if (shakeEnabled) {
-                    Toast.makeText(MainActivity.this, "Shake enabled", Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
+        // Shake detection is always enabled
+        shakeEnabled = true;
 
         // Donate UI
         buttonDonate = (TextView) findViewById(R.id.buttonDonate);
@@ -1255,7 +1247,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         
         if (switchCompass != null) switchCompass.setTextColor(mainTextColor);
         if (switchFlashlight != null) switchFlashlight.setTextColor(mainTextColor);
-        if (switchShake != null) switchShake.setTextColor(mainTextColor);
 
         if (buttonRefresh != null) buttonRefresh.setTextColor(highlightColor);
         if (buttonWeather != null) buttonWeather.setTextColor(highlightColor);

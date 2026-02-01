@@ -44,7 +44,6 @@
     <string name="close_button">Close</string>
     <string name="extra_data_link">More data</string>
     <string name="flashlight_toggle">Flashlight</string>
-    <string name="shake_toggle">Shake to Light</string>
     <string name="refresh_gps_button">Refresh GPS Coordinates</string>
     <string name="units_appearance_label">Units &amp; Appearance</string>
     <string name="night_mode_toggle">Night Mode</string>

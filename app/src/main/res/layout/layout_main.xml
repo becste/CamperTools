@@ -127,26 +127,13 @@
         android:text="@string/tilt_label"
         android:paddingTop="4dp" />
 
-    <!-- Flashlight Controls -->
-    <LinearLayout
+    <!-- Flashlight -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchFlashlight"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:orientation="horizontal">
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchFlashlight"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/flashlight_toggle" />
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchShake"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:text="@string/shake_toggle" />
-    </LinearLayout>
+        android:text="@string/flashlight_toggle" />
 
     <SeekBar
         android:id="@+id/seekBrightness"
