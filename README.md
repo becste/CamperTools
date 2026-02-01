@@ -4,16 +4,16 @@
 
 ## ✨ Features
 
-*   **📏 Leveling Tool:** Precise 2-axis bubble level with visual guides. Calibrate it to your vehicle's unique floor or counter tilt.
+*   **📏 Leveling Tool:** Precise 2-axis bubble level with visual guides. **Pitch & Roll** readout. **Auto-calibrate** to offset your phone's camera bump or uneven surfaces.
+*   **🔦 Shake to Light:** Toggle the flashlight on/off simply by shaking your device (works even when using other tools in the app).
+*   **🔴 Night Mode:** Full **red-light interface** across all screens (Settings, Weather, Level) to preserve your night vision.
 *   **🧭 Compass:** Smooth, filtered compass heading.
 *   **🌤️ Weather Forecast:**
     *   Instant current conditions.
     *   **Rolling 24-hour forecast** for temperature (min/max), wind gusts, and precipitation.
-    *   Detailed "Extra Data" view with Sunrise/Sunset times, Sunshine duration, and Cloud cover.
+    *   **More Data** view with Sunrise/Sunset (auto-formats 12h/24h), Sunshine duration, and Cloud cover.
     *   Powered by [Open-Meteo](https://open-meteo.com/).
-*   **🔦 Flashlight:** Quick access to the camera LED with adjustable brightness (Android 13+).
-*   **🔴 Night Mode:** Preserves your night vision with a red-light interface and dimmed screen.
-*   **📷 Bump Compensation:** Account for your phone's camera bump to get a perfectly flat reading.
+*   **⚙️ Customization:** Toggle Imperial/Metric units, enable Night Mode, and calibrate sensors in the redesigned Settings menu.
 
 ## 📱 Screenshots
 
