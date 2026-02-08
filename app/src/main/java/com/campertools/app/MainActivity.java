@@ -104,6 +104,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private LevelView levelView;
     private CompassView compassView;
     private TextView textTilt;
+    private TextView textHeightAdjust;
     private SwitchMaterial switchCompass;
     private TextView textSettingsLink;
 
@@ -241,6 +242,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         levelView = (LevelView) findViewById(R.id.levelView);
         compassView = (CompassView) findViewById(R.id.compassView);
         textTilt = (TextView) findViewById(R.id.textTilt);
+        textHeightAdjust = findViewById(R.id.textHeightAdjust);
         switchCompass = (SwitchMaterial) findViewById(R.id.switchCompass);
         textSettingsLink = (TextView) findViewById(R.id.textSettingsLink);
 
@@ -250,6 +252,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         // Shake detection is always enabled
         shakeEnabled = true;
+
+        if (textHeightAdjust != null) {
+            textHeightAdjust.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, WheelAdjustActivity.class);
+                intent.putExtra(SettingsActivity.EXTRA_PITCH_OFFSET_DEG, pitchOffsetDeg);
+                intent.putExtra(SettingsActivity.EXTRA_ROLL_OFFSET_DEG, rollOffsetDeg);
+                intent.putExtra(SettingsActivity.EXTRA_USE_IMPERIAL, useImperial);
+                intent.putExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, useNightMode);
+                startActivity(intent);
+            });
+        }
 
         // Donate UI
         buttonDonate = (TextView) findViewById(R.id.buttonDonate);
@@ -1251,6 +1264,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (buttonExtraData != null) buttonExtraData.setTextColor(highlightColor);
         if (buttonDonate != null) buttonDonate.setTextColor(highlightColor);
         if (textSettingsLink != null) textSettingsLink.setTextColor(highlightColor);
+        if (textHeightAdjust != null) textHeightAdjust.setTextColor(highlightColor);
         if (weatherCredit != null) weatherCredit.setLinkTextColor(highlightColor);
         if (weatherCredit != null) weatherCredit.setTextColor(mainTextColor);
     }

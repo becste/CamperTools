@@ -75,5 +75,13 @@
     <string name="fetching_weather">Fetching detailed weather data…</string>
     <string name="error_fetching_weather">Error fetching weather data.</string>
     <string name="error_parsing_weather">Error parsing detailed data.</string>
-    <string name="weather_network_error">Network error</string>
+    <string name="weather_network_error">No connection</string>
+    <string name="height_adjust_link">Height\nAdjust</string>
+    <string name="wheelbase_label">Wheelbase</string>
+    <string name="track_width_label">Track Width</string>
+    <string name="wheel_fl">FL</string>
+    <string name="wheel_fr">FR</string>
+    <string name="wheel_bl">BL</string>
+    <string name="wheel_br">BR</string>
+    <string name="set_dimensions_hint">Set Dimensions</string>
 </resources>

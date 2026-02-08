@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:id="@+id/textHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Vehicle Dimensions"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        
+        <TextView
+            android:id="@+id/labelWheelbase"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/wheelbase_label"/>
+            
+        <EditText
+            android:id="@+id/inputWheelbase"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:hint="0.0"
+            android:gravity="end"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+        
+        <TextView
+            android:id="@+id/labelTrackWidth"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/track_width_label"/>
+            
+        <EditText
+            android:id="@+id/inputTrackWidth"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:hint="0.0"
+            android:gravity="end"/>
+    </LinearLayout>
+
+    <!-- Car Diagram -->
+    <RelativeLayout
+        android:layout_width="300dp"
+        android:layout_height="400dp"
+        android:layout_marginTop="16dp">
+
+        <!-- Chassis Placeholder -->
+        <View
+            android:layout_width="140dp"
+            android:layout_height="280dp"
+            android:layout_centerInParent="true"
+            android:background="#44888888"/>
+
+        <View
+            android:layout_width="140dp"
+            android:layout_height="4dp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="60dp"
+            android:background="#88000000"/> <!-- Front Axle Line -->
+
+        <View
+            android:layout_width="140dp"
+            android:layout_height="4dp"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="60dp"
+            android:background="#88000000"/> <!-- Rear Axle Line -->
+
+        <!-- Front Label -->
+        <TextView
+            android:id="@+id/textFrontLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentTop="true"
+            android:text="FRONT (Phone Top)"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+
+        <!-- Wheels -->
+        <!-- FL -->
+        <TextView
+            android:id="@+id/textFL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="40dp"
+            android:text="FL\n0.0"
+            android:gravity="center"
+            android:background="#22000000"
+            android:padding="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <!-- FR -->
+        <TextView
+            android:id="@+id/textFR"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="40dp"
+            android:text="FR\n0.0"
+            android:gravity="center"
+            android:background="#22000000"
+            android:padding="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <!-- BL -->
+        <TextView
+            android:id="@+id/textBL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="40dp"
+            android:text="BL\n0.0"
+            android:gravity="center"
+            android:background="#22000000"
+            android:padding="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <!-- BR -->
+        <TextView
+            android:id="@+id/textBR"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="40dp"
+            android:text="BR\n0.0"
+            android:gravity="center"
+            android:background="#22000000"
+            android:padding="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/textClose"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="@string/close_button"
+        android:textColor="@color/teal_200"
+        android:padding="16dp"
+        android:textSize="18sp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackgroundBorderless"/>
+
+</LinearLayout>
