@@ -1,69 +1,220 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/rootLayout"
+    android:id="@+id/mainContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center_horizontal|center_vertical">
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/textSunrise"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="24sp"
-        android:text="Sunrise: –" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/textSunset"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:textSize="24sp"
-        android:text="Sunset: –" />
+        <LinearLayout
+            android:id="@+id/rootLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp"
+            android:paddingTop="48dp"
+            android:gravity="center_horizontal">
 
-    <TextView
-        android:id="@+id/textWindGusts"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:textSize="18sp"
-        android:text="Max Gusts (24h): –" />
+            <TextView
+                android:id="@+id/textSunrise"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="24sp"
+                android:text="Sunrise: –" />
 
-    <TextView
-        android:id="@+id/textSunshine"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="18sp"
-        android:text="Sunshine (24h): –" />
+            <TextView
+                android:id="@+id/textSunset"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textSize="24sp"
+                android:text="Sunset: –" />
 
-    <TextView
-        android:id="@+id/textCloudCover"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="18sp"
-        android:text="Cloud Cover (avg): –" />
+            <TextView
+                android:id="@+id/textWindGusts"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textSize="18sp"
+                android:text="Max Gusts (24h): –" />
 
-    <TextView
-        android:id="@+id/textSunStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="Getting location..."/>
+            <TextView
+                android:id="@+id/textSunshine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="18sp"
+                android:text="Sunshine (24h): –" />
 
+            <TextView
+                android:id="@+id/textCloudCover"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="18sp"
+                android:text="Cloud Cover (avg): –" />
+
+            <!-- Forecast Section -->
+            <View
+                android:id="@+id/divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"
+                android:background="?android:attr/listDivider" />
+
+            <TextView
+                android:id="@+id/textForecastHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3-Day Forecast"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Day 0 (Today) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingBottom="12dp">
+                
+                <TextView
+                    android:id="@+id/textDay0Date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Today"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                
+                <TextView
+                    android:id="@+id/textDay0Temp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Min / Max"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/textDay0Precip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Precip"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/textDay0Wind"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Wind"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- Day 1 (Tomorrow) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:id="@+id/textDay1Date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tomorrow"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textDay1Temp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Min / Max"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/textDay1Precip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Precip"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/textDay1Wind"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Wind"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- Day 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:id="@+id/textDay2Date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Date"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textDay2Temp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Min / Max"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/textDay2Precip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Precip"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/textDay2Wind"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Wind"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textSunStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Getting location..."/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Fixed Bottom Button -->
     <TextView
         android:id="@+id/textBack"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
         android:text="@string/close_button"
         android:textColor="@color/teal_200"
-        android:textSize="14sp"
+        android:textSize="18sp"
+        android:gravity="center"
         android:clickable="true"
         android:focusable="true"
-        android:padding="6dp"
-        android:background="?attr/selectableItemBackgroundBorderless" />
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground" />
 
 </LinearLayout>

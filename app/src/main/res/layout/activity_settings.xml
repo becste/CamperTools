@@ -17,37 +17,53 @@
         android:textStyle="bold"
         android:paddingBottom="4dp" />
 
-    <EditText
-        android:id="@+id/inputCameraBump"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/camera_bump_hint"
-        android:inputType="numberSigned|numberDecimal"
-        android:maxLines="1"
-        android:padding="6dp" />
-
-    <RadioGroup
-        android:id="@+id/radioBumpAxis"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingTop="6dp">
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
 
-        <RadioButton
-            android:id="@+id/radioBumpAxisPitch"
+        <TextView
+            android:id="@+id/textPitchLabel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:checked="true"
-            android:text="@string/camera_bump_axis_pitch" />
+            android:text="@string/calibration_pitch_label" />
 
-        <RadioButton
-            android:id="@+id/radioBumpAxisRoll"
+        <EditText
+            android:id="@+id/inputPitchOffset"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberSigned|numberDecimal"
+            android:gravity="end"
+            android:maxLines="1"
+            android:padding="6dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/textRollLabel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/camera_bump_axis_roll" />
-    </RadioGroup>
+            android:text="@string/calibration_roll_label" />
+
+        <EditText
+            android:id="@+id/inputRollOffset"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberSigned|numberDecimal"
+            android:gravity="end"
+            android:maxLines="1"
+            android:padding="6dp" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/buttonAutoCalibrate"

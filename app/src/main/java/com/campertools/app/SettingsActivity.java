@@ -8,14 +8,15 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -24,26 +25,21 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.util.Locale;
 
-import androidx.core.content.ContextCompat;
-import android.view.WindowManager;
-import android.widget.RadioButton;
-
 public class SettingsActivity extends AppCompatActivity implements SensorEventListener {
 
-    public static final String EXTRA_HEIGHT_MM = "heightMm";
-    public static final String EXTRA_APPLIES_ROLL = "appliesRoll";
+    public static final String EXTRA_PITCH_OFFSET_DEG = "pitchOffsetDeg";
+    public static final String EXTRA_ROLL_OFFSET_DEG = "rollOffsetDeg";
     public static final String EXTRA_USE_IMPERIAL = "useImperial";
     public static final String EXTRA_USE_NIGHT_MODE = "useNightMode";
 
-    private static final float DEFAULT_SUPPORT_SPAN_MM = 70f;
     private static final float ALPHA = 0.1f; // Filter factor
 
     private TextView textLevelHeader;
+    private TextView textPitchLabel;
+    private TextView textRollLabel;
     private TextView textUnitsHeader;
-    private EditText inputCameraBump;
-    private RadioGroup radioBumpAxis;
-    private RadioButton radioBumpAxisPitch;
-    private RadioButton radioBumpAxisRoll;
+    private EditText inputPitchOffset;
+    private EditText inputRollOffset;
     private Button buttonAutoCalibrate;
     private SwitchMaterial switchUnits;
     private SwitchMaterial switchNightMode;
@@ -69,11 +65,11 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         });
 
         textLevelHeader = findViewById(R.id.textLevelHeader);
+        textPitchLabel = findViewById(R.id.textPitchLabel);
+        textRollLabel = findViewById(R.id.textRollLabel);
         textUnitsHeader = findViewById(R.id.textUnitsHeader);
-        inputCameraBump = findViewById(R.id.inputCameraBump);
-        radioBumpAxis = findViewById(R.id.radioBumpAxis);
-        radioBumpAxisPitch = findViewById(R.id.radioBumpAxisPitch);
-        radioBumpAxisRoll = findViewById(R.id.radioBumpAxisRoll);
+        inputPitchOffset = findViewById(R.id.inputPitchOffset);
+        inputRollOffset = findViewById(R.id.inputRollOffset);
         buttonAutoCalibrate = findViewById(R.id.buttonAutoCalibrate);
         switchUnits = findViewById(R.id.switchUnits);
         switchNightMode = findViewById(R.id.switchNightMode);
@@ -85,15 +81,15 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         }
 
         Intent intent = getIntent();
-        float heightMm = intent.getFloatExtra(EXTRA_HEIGHT_MM, 0f);
-        boolean appliesRoll = intent.getBooleanExtra(EXTRA_APPLIES_ROLL, false);
+        float pitchDeg = intent.getFloatExtra(EXTRA_PITCH_OFFSET_DEG, 0f);
+        float rollDeg = intent.getFloatExtra(EXTRA_ROLL_OFFSET_DEG, 0f);
         useImperial = intent.getBooleanExtra(EXTRA_USE_IMPERIAL, false);
         useNightMode = intent.getBooleanExtra(EXTRA_USE_NIGHT_MODE, false);
 
         // Populate UI
-        double displayValue = useImperial ? (heightMm / 25.4) : heightMm;
-        inputCameraBump.setText(String.format(Locale.getDefault(), "%.1f", displayValue));
-        radioBumpAxis.check(appliesRoll ? R.id.radioBumpAxisRoll : R.id.radioBumpAxisPitch);
+        inputPitchOffset.setText(String.format(Locale.getDefault(), "%.1f", pitchDeg));
+        inputRollOffset.setText(String.format(Locale.getDefault(), "%.1f", rollDeg));
+        
         switchUnits.setChecked(useImperial);
 
         switchUnits.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -148,44 +144,45 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         findViewById(android.R.id.content).setBackgroundColor(backgroundColor);
 
         if (textLevelHeader != null) textLevelHeader.setTextColor(textColor);
+        if (textPitchLabel != null) textPitchLabel.setTextColor(textColor);
+        if (textRollLabel != null) textRollLabel.setTextColor(textColor);
         if (textUnitsHeader != null) textUnitsHeader.setTextColor(textColor);
-        if (inputCameraBump != null) {
-            inputCameraBump.setTextColor(textColor);
-            inputCameraBump.setHintTextColor(hintColor);
+        
+        if (inputPitchOffset != null) {
+            inputPitchOffset.setTextColor(textColor);
+            inputPitchOffset.setHintTextColor(hintColor);
         }
-        if (radioBumpAxisPitch != null) radioBumpAxisPitch.setTextColor(textColor);
-        if (radioBumpAxisRoll != null) radioBumpAxisRoll.setTextColor(textColor);
+        if (inputRollOffset != null) {
+            inputRollOffset.setTextColor(textColor);
+            inputRollOffset.setHintTextColor(hintColor);
+        }
         
         if (switchUnits != null) switchUnits.setTextColor(textColor);
         if (switchNightMode != null) switchNightMode.setTextColor(textColor);
         
-        // Buttons usually have their own style, but we can tint their text if needed
-        // For standard Buttons, setTextColor works.
         if (buttonAutoCalibrate != null) buttonAutoCalibrate.setTextColor(textColor);
         if (buttonBack != null) buttonBack.setTextColor(textColor);
     }
 
     private void saveSettings() {
-        String text = inputCameraBump.getText().toString().trim();
-        double value = 0.0;
-        if (!text.isEmpty()) {
-            try {
-                value = Double.parseDouble(text);
-            } catch (NumberFormatException e) {
-                Toast.makeText(this, R.string.camera_bump_invalid, Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
-
-        double heightValueMm = useImperial ? value * 25.4 : value;
-        boolean rollSelected = radioBumpAxis.getCheckedRadioButtonId() == R.id.radioBumpAxisRoll;
+        double pitchVal = parseDoubleSafe(inputPitchOffset.getText().toString());
+        double rollVal = parseDoubleSafe(inputRollOffset.getText().toString());
 
         Intent result = new Intent();
-        result.putExtra(EXTRA_HEIGHT_MM, (float) heightValueMm);
-        result.putExtra(EXTRA_APPLIES_ROLL, rollSelected);
+        result.putExtra(EXTRA_PITCH_OFFSET_DEG, (float) pitchVal);
+        result.putExtra(EXTRA_ROLL_OFFSET_DEG, (float) rollVal);
         result.putExtra(EXTRA_USE_IMPERIAL, useImperial);
         result.putExtra(EXTRA_USE_NIGHT_MODE, useNightMode);
         setResult(RESULT_OK, result);
+    }
+    
+    private double parseDoubleSafe(String text) {
+        if (text == null || text.trim().isEmpty()) return 0.0;
+        try {
+            return Double.parseDouble(text.trim());
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 
     @Override
@@ -231,26 +228,36 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         }
 
         float g = SensorManager.GRAVITY_EARTH;
-        float normX = gravity[0] / g;
-        float normY = gravity[1] / g;
+        float normX = gravity[0] / g; // Roll component
+        float normY = gravity[1] / g; // Pitch component
 
-        boolean dominantIsY = Math.abs(normY) >= Math.abs(normX);
-        float selectedNorm = dominantIsY ? normY : normX;
+        // Clamp
+        if (normX > 1f) normX = 1f;
+        if (normX < -1f) normX = -1f;
+        if (normY > 1f) normY = 1f;
+        if (normY < -1f) normY = -1f;
 
-        float mag = Math.abs(selectedNorm);
-        float sign = Math.signum(selectedNorm);
+        // Calculate angle in degrees
+        // pitch = -asin(normY) in MainActivity logic, so we offset by that amount?
+        // If current reading is +5 deg, we want offset to be +5 deg so result is 0.
+        
+        // MainActivity: double pitchDeg = -Math.asin(adjustedY) * 180.0 / Math.PI;
+        // adjustedY = normY - offset;
+        // We want adjustedY = 0 => offset = normY.
+        // So offset_sine = normY.
+        // offset_deg = asin(normY) * 180 / PI.
+        // BUT wait, MainActivity pitch is NEGATIVE asin.
+        // Let's stick to the convention: "Pitch Offset" means the value we subtract from the reading?
+        // Or the value of the current tilt?
+        // If we want "Auto Calibrate", we want the current tilt to become "Zero".
+        // Current Pitch (deg) = -asin(normY) * 180/PI.
+        // If we want this to be the new zero, we should store this value as the offset.
+        
+        double pitchDeg = -Math.asin(normY) * 180.0 / Math.PI;
+        double rollDeg = Math.asin(normX) * 180.0 / Math.PI;
 
-        if (mag >= 0.99f) {
-            Toast.makeText(this, "Tilt too steep for calibration", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        double h = (mag * DEFAULT_SUPPORT_SPAN_MM) / Math.sqrt(1 - mag * mag);
-        double signedH = h * sign;
-        double displayValue = useImperial ? (signedH / 25.4) : signedH;
-
-        inputCameraBump.setText(String.format(Locale.getDefault(), "%.1f", displayValue));
-        radioBumpAxis.check(dominantIsY ? R.id.radioBumpAxisPitch : R.id.radioBumpAxisRoll);
+        inputPitchOffset.setText(String.format(Locale.getDefault(), "%.1f", pitchDeg));
+        inputRollOffset.setText(String.format(Locale.getDefault(), "%.1f", rollDeg));
         
         Toast.makeText(this, "Calibrated from current position", Toast.LENGTH_SHORT).show();
     }

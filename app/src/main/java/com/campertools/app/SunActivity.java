@@ -6,8 +6,12 @@ import android.view.WindowManager;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,6 +35,14 @@ public class SunActivity extends AppCompatActivity {
     private TextView textSunStatus;
     private TextView textBack;
 
+    // Forecast UI
+    private TextView textForecastHeader;
+    private View divider;
+    private TextView[] dayDates = new TextView[3];
+    private TextView[] dayTemps = new TextView[3];
+    private TextView[] dayPrecips = new TextView[3];
+    private TextView[] dayWinds = new TextView[3];
+
     private static String lastJsonSunData;
     private boolean useImperial = false;
     private boolean useNightMode = false;
@@ -38,7 +50,14 @@ public class SunActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_sun);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainContainer), (v, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
 
         android.content.SharedPreferences prefs = getSharedPreferences("campertools_prefs", MODE_PRIVATE);
         useImperial = prefs.getBoolean("pref_use_imperial", false);
@@ -51,6 +70,24 @@ public class SunActivity extends AppCompatActivity {
         textCloudCover = findViewById(R.id.textCloudCover);
         textSunStatus = findViewById(R.id.textSunStatus);
         textBack = findViewById(R.id.textBack);
+
+        textForecastHeader = findViewById(R.id.textForecastHeader);
+        divider = findViewById(R.id.divider);
+
+        dayDates[0] = findViewById(R.id.textDay0Date);
+        dayTemps[0] = findViewById(R.id.textDay0Temp);
+        dayPrecips[0] = findViewById(R.id.textDay0Precip);
+        dayWinds[0] = findViewById(R.id.textDay0Wind);
+
+        dayDates[1] = findViewById(R.id.textDay1Date);
+        dayTemps[1] = findViewById(R.id.textDay1Temp);
+        dayPrecips[1] = findViewById(R.id.textDay1Precip);
+        dayWinds[1] = findViewById(R.id.textDay1Wind);
+
+        dayDates[2] = findViewById(R.id.textDay2Date);
+        dayTemps[2] = findViewById(R.id.textDay2Temp);
+        dayPrecips[2] = findViewById(R.id.textDay2Precip);
+        dayWinds[2] = findViewById(R.id.textDay2Wind);
 
         applyNightMode();
 
@@ -76,11 +113,12 @@ public class SunActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 // Fetch daily wind gusts, and hourly cloudcover, sunshine_duration, is_day
+                // Updated URL with daily params
                 String urlStr =
                         "https://api.open-meteo.com/v1/forecast"
                                 + "?latitude=" + location.getLatitude()
                                 + "&longitude=" + location.getLongitude()
-                                + "&daily=sunrise,sunset,windgusts_10m_max"
+                                + "&daily=sunrise,sunset,windgusts_10m_max,temperature_2m_max,temperature_2m_min,precipitation_sum,winddirection_10m_dominant,weathercode"
                                 + "&hourly=cloudcover,sunshine_duration,is_day"
                                 + "&timezone=auto";
 
@@ -123,6 +161,14 @@ public class SunActivity extends AppCompatActivity {
             JSONArray sunsetArray = daily.getJSONArray("sunset");
             JSONArray windGustsArray = daily.optJSONArray("windgusts_10m_max");
             
+            // Forecast Data Arrays
+            JSONArray tempMaxArray = daily.optJSONArray("temperature_2m_max");
+            JSONArray tempMinArray = daily.optJSONArray("temperature_2m_min");
+            JSONArray precipSumArray = daily.optJSONArray("precipitation_sum");
+            JSONArray windDirArray = daily.optJSONArray("winddirection_10m_dominant");
+            JSONArray weatherCodeArray = daily.optJSONArray("weathercode");
+            JSONArray timeArray = daily.optJSONArray("time");
+
             // Hourly Data
             JSONObject hourly = root.getJSONObject("hourly");
             JSONArray cloudCoverArray = hourly.optJSONArray("cloudcover");
@@ -200,12 +246,68 @@ public class SunActivity extends AppCompatActivity {
                         textCloudCover.setText(String.format(Locale.getDefault(), getString(R.string.cloud_cover_format), avgCloud));
                     }
                 }
+                
+                // Forecast Population
+                if (timeArray != null) {
+                    SimpleDateFormat dayFormat = new SimpleDateFormat("EEE, MMM d", Locale.getDefault());
+                    SimpleDateFormat inputDateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+                    for (int i = 0; i < 3; i++) {
+                        if (i >= timeArray.length()) break;
+                        
+                        // Date
+                        String dateStr = timeArray.getString(i);
+                        try {
+                            Date d = inputDateFormat.parse(dateStr);
+                            dayDates[i].setText(dayFormat.format(d));
+                        } catch (Exception e) {
+                            dayDates[i].setText(dateStr);
+                        }
+
+                        // Temp
+                        if (tempMaxArray != null && tempMinArray != null) {
+                            double min = tempMinArray.getDouble(i);
+                            double max = tempMaxArray.getDouble(i);
+                            if (useImperial) {
+                                min = (min * 9/5) + 32;
+                                max = (max * 9/5) + 32;
+                                dayTemps[i].setText(String.format(Locale.getDefault(), "Low %.0f°F / High %.0f°F", min, max));
+                            } else {
+                                dayTemps[i].setText(String.format(Locale.getDefault(), "Low %.0f°C / High %.0f°C", min, max));
+                            }
+                        }
+
+                        // Precip
+                        if (precipSumArray != null) {
+                            double p = precipSumArray.getDouble(i);
+                            if (useImperial) {
+                                double pIn = p * 0.0393701;
+                                dayPrecips[i].setText(String.format(Locale.getDefault(), "Precip: %.2f in", pIn));
+                            } else {
+                                dayPrecips[i].setText(String.format(Locale.getDefault(), "Precip: %.1f mm", p));
+                            }
+                        }
+
+                        // Wind
+                        if (windDirArray != null) {
+                            double w = windDirArray.getDouble(i);
+                            String dir = getCardinalDirection(w);
+                            dayWinds[i].setText("Wind: " + dir);
+                        }
+                    }
+                }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
             textSunStatus.setText(getString(R.string.error_parsing_weather));
         }
+    }
+
+    private String getCardinalDirection(double deg) {
+        String[] cardinal = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+        int idx = (int) Math.round(((deg % 360) / 45)) % 8;
+        return cardinal[idx];
     }
 
     private void applyNightMode() {
@@ -235,5 +337,20 @@ public class SunActivity extends AppCompatActivity {
         if (textCloudCover != null) textCloudCover.setTextColor(textColor);
         if (textSunStatus != null) textSunStatus.setTextColor(textColor);
         if (textBack != null) textBack.setTextColor(backColor);
+        
+        if (textForecastHeader != null) textForecastHeader.setTextColor(textColor);
+        // We can ignore divider color or tint it if needed, usually default gray is fine or hard to see in red mode.
+        // Let's tint divider if night mode
+        if (divider != null) {
+             divider.setBackgroundColor(textColor);
+             divider.setAlpha(0.5f);
+        }
+
+        for (int i=0; i<3; i++) {
+            if (dayDates[i] != null) dayDates[i].setTextColor(textColor);
+            if (dayTemps[i] != null) dayTemps[i].setTextColor(textColor);
+            if (dayPrecips[i] != null) dayPrecips[i].setTextColor(textColor);
+            if (dayWinds[i] != null) dayWinds[i].setTextColor(textColor);
+        }
     }
 }

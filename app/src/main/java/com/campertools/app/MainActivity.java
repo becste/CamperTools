@@ -77,12 +77,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final float MAG_ALPHA = 0.10f;
     private static final float TILT_ALPHA = 0.12f;
     private static final float AZIMUTH_ALPHA = 0.18f;
-    private static final float DEFAULT_SUPPORT_SPAN_MM = 70f;
-    private static final String STATE_BUMP_HEIGHT = "state_bump_height";
-    private static final String STATE_BUMP_ROLL = "state_bump_roll";
+    private static final String STATE_PITCH_OFFSET_DEG = "state_pitch_offset_deg";
+    private static final String STATE_ROLL_OFFSET_DEG = "state_roll_offset_deg";
     private static final String PREFS = "campertools_prefs";
-    private static final String PREF_BUMP_HEIGHT = "pref_bump_height";
-    private static final String PREF_BUMP_ROLL = "pref_bump_roll";
+    private static final String PREF_PITCH_OFFSET_DEG = "pref_pitch_offset_deg";
+    private static final String PREF_ROLL_OFFSET_DEG = "pref_roll_offset_deg";
     private static final String PREF_USE_IMPERIAL = "pref_use_imperial";
     private static final String PREF_USE_NIGHT_MODE = "pref_use_night_mode";
     private static final long WEATHER_CACHE_WINDOW_MS = 60_000L;
@@ -159,9 +158,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // State for units
     private boolean useImperial = false;
     private boolean useNightMode = false;
-    private float lastBumpHeightMm = 0f;
-    private float compensationMagnitude = 0f;
-    private boolean compensationAppliesToRoll = false;
+    private float pitchOffsetDeg = 0f;
+    private float rollOffsetDeg = 0f;
     private long lastWeatherFetchMs = 0L;
     private String lastWeatherKey = null;
 
@@ -193,16 +191,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         Intent data = result.getData();
-                        lastBumpHeightMm = data.getFloatExtra(SettingsActivity.EXTRA_HEIGHT_MM, 0f);
-                        compensationAppliesToRoll = data.getBooleanExtra(SettingsActivity.EXTRA_APPLIES_ROLL, false);
-                        compensationMagnitude = computeNormalizedOffset(Math.abs(lastBumpHeightMm), DEFAULT_SUPPORT_SPAN_MM);
+                        pitchOffsetDeg = data.getFloatExtra(SettingsActivity.EXTRA_PITCH_OFFSET_DEG, 0f);
+                        rollOffsetDeg = data.getFloatExtra(SettingsActivity.EXTRA_ROLL_OFFSET_DEG, 0f);
                         useImperial = data.getBooleanExtra(SettingsActivity.EXTRA_USE_IMPERIAL, false);
                         useNightMode = data.getBooleanExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, false);
 
                         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
                         prefs.edit()
-                                .putFloat(PREF_BUMP_HEIGHT, lastBumpHeightMm)
-                                .putBoolean(PREF_BUMP_ROLL, compensationAppliesToRoll)
+                                .putFloat(PREF_PITCH_OFFSET_DEG, pitchOffsetDeg)
+                                .putFloat(PREF_ROLL_OFFSET_DEG, rollOffsetDeg)
                                 .putBoolean(PREF_USE_IMPERIAL, useImperial)
                                 .putBoolean(PREF_USE_NIGHT_MODE, useNightMode)
                                 .apply();
@@ -215,20 +212,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         if (savedInstanceState != null) {
-            lastBumpHeightMm = savedInstanceState.getFloat(STATE_BUMP_HEIGHT, 0f);
-            compensationAppliesToRoll = savedInstanceState.getBoolean(STATE_BUMP_ROLL, false);
+            pitchOffsetDeg = savedInstanceState.getFloat(STATE_PITCH_OFFSET_DEG, 0f);
+            rollOffsetDeg = savedInstanceState.getFloat(STATE_ROLL_OFFSET_DEG, 0f);
             useImperial = prefs.getBoolean(PREF_USE_IMPERIAL, false);
             useNightMode = prefs.getBoolean(PREF_USE_NIGHT_MODE, false);
         } else {
-            lastBumpHeightMm = prefs.getFloat(PREF_BUMP_HEIGHT, 0f);
-            compensationAppliesToRoll = prefs.getBoolean(PREF_BUMP_ROLL, false);
+            pitchOffsetDeg = prefs.getFloat(PREF_PITCH_OFFSET_DEG, 0f);
+            rollOffsetDeg = prefs.getFloat(PREF_ROLL_OFFSET_DEG, 0f);
             useImperial = prefs.getBoolean(PREF_USE_IMPERIAL, false);
             useNightMode = prefs.getBoolean(PREF_USE_NIGHT_MODE, false);
         }
-        compensationMagnitude = computeNormalizedOffset(Math.abs(lastBumpHeightMm), DEFAULT_SUPPORT_SPAN_MM);
 
         // Elevation UI
         textElevation = (TextView) findViewById(R.id.textElevation);
+
         textStatus = (TextView) findViewById(R.id.textStatus);
         buttonRefresh = (TextView) findViewById(R.id.buttonRefresh);
 
@@ -617,8 +614,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void openSettings() {
         Intent intent = new Intent(this, SettingsActivity.class);
-        intent.putExtra(SettingsActivity.EXTRA_HEIGHT_MM, Math.abs(lastBumpHeightMm));
-        intent.putExtra(SettingsActivity.EXTRA_APPLIES_ROLL, compensationAppliesToRoll);
+        intent.putExtra(SettingsActivity.EXTRA_PITCH_OFFSET_DEG, pitchOffsetDeg);
+        intent.putExtra(SettingsActivity.EXTRA_ROLL_OFFSET_DEG, rollOffsetDeg);
         intent.putExtra(SettingsActivity.EXTRA_USE_IMPERIAL, useImperial);
         intent.putExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, useNightMode);
         settingsLauncher.launch(intent);
@@ -767,7 +764,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 + "?latitude=" + lat
                                 + "&longitude=" + lon
                                 + "&hourly=temperature_2m,precipitation,weathercode,winddirection_10m,cloudcover,sunshine_duration,is_day"
-                                + "&daily=sunrise,sunset,windgusts_10m_max"
+                                + "&daily=sunrise,sunset,windgusts_10m_max,temperature_2m_max,temperature_2m_min,precipitation_sum,winddirection_10m_dominant,weathercode"
                                 + "&current_weather=true"
                                 + "&timezone=auto";
 
@@ -838,21 +835,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             JSONObject current = root.getJSONObject("current_weather");
             double currentTemp = current.getDouble("temperature");
+            double currentWindSpeed = current.getDouble("windspeed");
+            double currentWindDir = current.getDouble("winddirection");
 
             JSONObject hourly = root.getJSONObject("hourly");
             JSONArray temps = hourly.getJSONArray("temperature_2m");
             JSONArray precip = hourly.getJSONArray("precipitation");
             JSONArray weathercode = hourly.getJSONArray("weathercode");
-            JSONArray windDir = hourly.getJSONArray("winddirection_10m");
-
+            
             // Calculate rolling 24h indices
             java.util.Calendar calendar = java.util.Calendar.getInstance();
             int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
             
             // Ensure we don't go out of bounds. Open-Meteo usually provides 7 days.
             int maxLen = Math.min(temps.length(),
-                            Math.min(precip.length(),
-                                    Math.min(weathercode.length(), windDir.length())));
+                            Math.min(precip.length(), weathercode.length()));
                                     
             int startIdx = currentHour;
             int endIdx = Math.min(maxLen, startIdx + 24);
@@ -865,27 +862,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             double max = temps.getDouble(startIdx);
             double sumTemp = 0;
             double sumPrecip = 0;
-            // Use first hour of the window for initial wind bucket? Or simple count.
-            // Let's just accumulate.
 
             boolean anyPrecip = false;
             boolean anySnowCode = false;
             boolean anyThunderCode = false;
             boolean anyFreezingCode = false;
-            int[] windBuckets = new int[8]; // N, NE, E, SE, S, SW, W, NW
 
             int count = 0;
             for (int i = startIdx; i < endIdx; i++) {
                 double t = temps.getDouble(i);
                 double p = precip.getDouble(i);
                 int code = weathercode.getInt(i);
-                double w = windDir.getDouble(i);
 
                 if (t < min) min = t;
                 if (t > max) max = t;
                 sumTemp += t;
                 sumPrecip += p;
-                windBuckets[directionBucketIndex(w)]++;
 
                 if (p > 0.05) {
                     anyPrecip = true;
@@ -941,6 +933,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
 
             String windText;
+            String[] cardinal = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+            int dirIdx = directionBucketIndex(currentWindDir);
+            String dirStr = cardinal[dirIdx];
+
+            if (useImperial) {
+                double speedMph = currentWindSpeed * 0.621371;
+                windText = String.format(
+                        Locale.getDefault(),
+                        getString(R.string.wind_format_imperial),
+                        speedMph,
+                        dirStr
+                );
+            } else {
+                windText = String.format(
+                        Locale.getDefault(),
+                        getString(R.string.wind_format_metric),
+                        currentWindSpeed,
+                        dirStr
+                );
+            }
+
             String precipText;
             if (!anyPrecip || sumPrecip < 0.05) {
                 precipText = getString(R.string.precip_none);
@@ -987,19 +1000,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
             }
 
-            int prevailingIndex = 0;
-            for (int i = 1; i < windBuckets.length; i++) {
-                if (windBuckets[i] > windBuckets[prevailingIndex]) {
-                    prevailingIndex = i;
-                }
-            }
-            String[] cardinal = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-            windText = String.format(
-                    Locale.getDefault(),
-                    getString(R.string.wind_format),
-                    cardinal[prevailingIndex]
-            );
-
             return new String[]{nowText, rangeText, windText, precipText};
 
         } catch (JSONException e) {
@@ -1028,6 +1028,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
         }
         updateSensorRegistration();
+        
+        // Auto-refresh GPS
+        pendingWeather = false;
+        checkPermissionAndProceed();
     }
 
     private void updateSensorRegistration() {
@@ -1056,8 +1060,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putFloat(STATE_BUMP_HEIGHT, lastBumpHeightMm);
-        outState.putBoolean(STATE_BUMP_ROLL, compensationAppliesToRoll);
+        outState.putFloat(STATE_PITCH_OFFSET_DEG, pitchOffsetDeg);
+        outState.putFloat(STATE_ROLL_OFFSET_DEG, rollOffsetDeg);
     }
 
     @Override
@@ -1138,19 +1142,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 smoothNormY += TILT_ALPHA * (normY - smoothNormY);
             }
 
-            float offsetX = 0f;
-            float offsetY = 0f;
-            if (compensationMagnitude > 0f) {
-                float sign = Math.signum(lastBumpHeightMm);
-                if (compensationAppliesToRoll) {
-                    offsetX = sign * compensationMagnitude;
-                } else {
-                    offsetY = sign * compensationMagnitude;
-                }
-            }
+            // Offsets in degrees -> convert to sine for "normalized" offset
+            float offsetPitchNorm = (float) Math.sin(Math.toRadians(pitchOffsetDeg));
+            float offsetRollNorm = (float) Math.sin(Math.toRadians(rollOffsetDeg));
 
-            float adjustedX = clampUnit(smoothNormX - offsetX);
-            float adjustedY = clampUnit(smoothNormY - offsetY);
+            float adjustedX = clampUnit(smoothNormX - offsetRollNorm);
+            float adjustedY = clampUnit(smoothNormY - offsetPitchNorm);
 
             if (levelView != null) {
                 levelView.setTilt(adjustedX, adjustedY);
@@ -1207,6 +1204,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
+
 
 
     private void applyNightMode() {
