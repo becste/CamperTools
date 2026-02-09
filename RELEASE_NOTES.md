@@ -1,5 +1,17 @@
 # Release Notes
 
+## Version 2.11 (Build 22)
+
+### Improvements
+- **Wheel Height Adjust UI:** 
+    - Added a visual vehicle diagram with a rounded chassis and orientation indicators.
+    - Improved layout with clear wheel labels (**FL, FR, BL, BR**) and teal-colored shim values.
+    - Switched metric shim suggestions from millimeters to **centimeters** for better readability.
+- **Settings Refinement:**
+    - Replaced the "Done" button with a cleaner "**Save & Close**" text link.
+    - Ensured consistent teal styling for all navigation links.
+- **Night Mode:** Enhanced visibility and consistency of colors across all new UI elements.
+
 ## Version 2.10 (Build 21)
 
 ### New Features

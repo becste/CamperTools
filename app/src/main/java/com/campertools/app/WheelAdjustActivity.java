@@ -34,9 +34,11 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
 
     private EditText inputWheelbase;
     private EditText inputTrackWidth;
-    private TextView textFL, textFR, textBL, textBR;
-    private TextView textFrontLabel, textHeader, textClose;
+    private TextView textFLValue, textFRValue, textBLValue, textBRValue;
+    private TextView labelFL, labelFR, labelBL, labelBR;
+    private TextView textFrontLabel, textHeader, textClose, textPhoneTopLabel;
     private TextView labelWheelbase, labelTrackWidth;
+    private TextView textChassisFront, textChassisArrow;
     private Button buttonRecalculate;
 
     private SensorManager sensorManager;
@@ -75,11 +77,21 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
 
         inputWheelbase = findViewById(R.id.inputWheelbase);
         inputTrackWidth = findViewById(R.id.inputTrackWidth);
-        textFL = findViewById(R.id.textFL);
-        textFR = findViewById(R.id.textFR);
-        textBL = findViewById(R.id.textBL);
-        textBR = findViewById(R.id.textBR);
-        textFrontLabel = findViewById(R.id.textFrontLabel);
+        
+        textFLValue = findViewById(R.id.textFLValue);
+        textFRValue = findViewById(R.id.textFRValue);
+        textBLValue = findViewById(R.id.textBLValue);
+        textBRValue = findViewById(R.id.textBRValue);
+        
+        labelFL = findViewById(R.id.labelFL);
+        labelFR = findViewById(R.id.labelFR);
+        labelBL = findViewById(R.id.labelBL);
+        labelBR = findViewById(R.id.labelBR);
+
+        textChassisFront = findViewById(R.id.textChassisFront);
+        textChassisArrow = findViewById(R.id.textChassisArrow);
+        textPhoneTopLabel = findViewById(R.id.textPhoneTopLabel);
+        
         textHeader = findViewById(R.id.textHeader);
         textClose = findViewById(R.id.textClose);
         labelWheelbase = findViewById(R.id.labelWheelbase);
@@ -263,10 +275,10 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         double shimBL = maxH - hBL;
         double shimBR = maxH - hBR;
 
-        updateWheelText(textFL, shimFL);
-        updateWheelText(textFR, shimFR);
-        updateWheelText(textBL, shimBL);
-        updateWheelText(textBR, shimBR);
+        updateWheelText(textFLValue, shimFL);
+        updateWheelText(textFRValue, shimFR);
+        updateWheelText(textBLValue, shimBL);
+        updateWheelText(textBRValue, shimBR);
     }
 
     private void updateWheelText(TextView view, double val) {
@@ -287,6 +299,7 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         int textColor;
         int backgroundColor;
         int hintColor;
+        int highlightColor;
 
         if (useNightMode) {
             WindowManager.LayoutParams layout = getWindow().getAttributes();
@@ -296,6 +309,7 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             textColor = ContextCompat.getColor(this, R.color.red_500);
             backgroundColor = ContextCompat.getColor(this, R.color.background_color);
             hintColor = ContextCompat.getColor(this, R.color.red_500);
+            highlightColor = textColor;
         } else {
             WindowManager.LayoutParams layout = getWindow().getAttributes();
             layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
@@ -304,14 +318,15 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             textColor = ContextCompat.getColor(this, R.color.primary_text);
             backgroundColor = ContextCompat.getColor(this, R.color.background_color);
             hintColor = ContextCompat.getColor(this, R.color.secondary_text);
+            highlightColor = ContextCompat.getColor(this, R.color.teal_200);
         }
         
         findViewById(android.R.id.content).setBackgroundColor(backgroundColor);
 
         if (textHeader != null) textHeader.setTextColor(textColor);
         if (textFrontLabel != null) textFrontLabel.setTextColor(textColor);
+        if (textPhoneTopLabel != null) textPhoneTopLabel.setTextColor(textColor);
         if (labelWheelbase != null) labelWheelbase.setTextColor(textColor);
-        if (labelTrackWidth != null) labelTrackWidth.setTextColor(textColor);
         
         if (inputWheelbase != null) {
             inputWheelbase.setTextColor(textColor);
@@ -322,10 +337,18 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             inputTrackWidth.setHintTextColor(hintColor);
         }
         
-        if (textFL != null) textFL.setTextColor(textColor);
-        if (textFR != null) textFR.setTextColor(textColor);
-        if (textBL != null) textBL.setTextColor(textColor);
-        if (textBR != null) textBR.setTextColor(textColor);
+        if (labelFL != null) labelFL.setTextColor(textColor);
+        if (labelFR != null) labelFR.setTextColor(textColor);
+        if (labelBL != null) labelBL.setTextColor(textColor);
+        if (labelBR != null) labelBR.setTextColor(textColor);
+
+        if (textFLValue != null) textFLValue.setTextColor(highlightColor);
+        if (textFRValue != null) textFRValue.setTextColor(highlightColor);
+        if (textBLValue != null) textBLValue.setTextColor(highlightColor);
+        if (textBRValue != null) textBRValue.setTextColor(highlightColor);
+
+        if (textChassisFront != null) textChassisFront.setTextColor(useNightMode ? textColor : ContextCompat.getColor(this, R.color.secondary_text));
+        if (textChassisArrow != null) textChassisArrow.setTextColor(useNightMode ? textColor : ContextCompat.getColor(this, R.color.secondary_text));
         
         if (textClose != null) textClose.setTextColor(useNightMode ? textColor : ContextCompat.getColor(this, R.color.teal_200));
         
