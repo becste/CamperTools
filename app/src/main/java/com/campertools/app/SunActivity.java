@@ -34,6 +34,7 @@ public class SunActivity extends AppCompatActivity {
     private TextView textCloudCover;
     private TextView textSunStatus;
     private TextView textBack;
+    private TextView textWeatherHeader;
 
     // Forecast UI
     private TextView textForecastHeader;
@@ -63,6 +64,7 @@ public class SunActivity extends AppCompatActivity {
         useImperial = prefs.getBoolean("pref_use_imperial", false);
         useNightMode = prefs.getBoolean("pref_use_night_mode", false);
 
+        textWeatherHeader = findViewById(R.id.textWeatherHeader);
         textSunrise = findViewById(R.id.textSunrise);
         textSunset = findViewById(R.id.textSunset);
         textWindGusts = findViewById(R.id.textWindGusts);
@@ -192,12 +194,17 @@ public class SunActivity extends AppCompatActivity {
                 // Wind Gusts
                 if (windGustsArray != null && windGustsArray.length() > 0) {
                     double maxGustKmh = windGustsArray.getDouble(0);
+                    String dir = "";
+                    if (windDirArray != null && windDirArray.length() > 0) {
+                        dir = getCardinalDirection(windDirArray.getDouble(0));
+                    }
+                    
                     if (useImperial) {
                         // km/h to mph
                         double maxGustMph = maxGustKmh * 0.621371;
-                        textWindGusts.setText(String.format(Locale.getDefault(), getString(R.string.max_gusts_format_imperial), maxGustMph));
+                        textWindGusts.setText(String.format(Locale.getDefault(), getString(R.string.max_gusts_format_imperial), maxGustMph, dir));
                     } else {
-                        textWindGusts.setText(String.format(Locale.getDefault(), getString(R.string.max_gusts_format_metric), maxGustKmh));
+                        textWindGusts.setText(String.format(Locale.getDefault(), getString(R.string.max_gusts_format_metric), maxGustKmh, dir));
                     }
                 }
 
@@ -253,10 +260,11 @@ public class SunActivity extends AppCompatActivity {
                     SimpleDateFormat inputDateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
                     for (int i = 0; i < 3; i++) {
-                        if (i >= timeArray.length()) break;
+                        int dataIdx = i + 1; // Start from index 1 (Tomorrow)
+                        if (dataIdx >= timeArray.length()) break;
                         
                         // Date
-                        String dateStr = timeArray.getString(i);
+                        String dateStr = timeArray.getString(dataIdx);
                         try {
                             Date d = inputDateFormat.parse(dateStr);
                             dayDates[i].setText(dayFormat.format(d));
@@ -265,9 +273,9 @@ public class SunActivity extends AppCompatActivity {
                         }
 
                         // Temp
-                        if (tempMaxArray != null && tempMinArray != null) {
-                            double min = tempMinArray.getDouble(i);
-                            double max = tempMaxArray.getDouble(i);
+                        if (tempMaxArray != null && tempMinArray != null && dataIdx < tempMaxArray.length()) {
+                            double min = tempMinArray.getDouble(dataIdx);
+                            double max = tempMaxArray.getDouble(dataIdx);
                             if (useImperial) {
                                 min = (min * 9/5) + 32;
                                 max = (max * 9/5) + 32;
@@ -278,8 +286,8 @@ public class SunActivity extends AppCompatActivity {
                         }
 
                         // Precip
-                        if (precipSumArray != null) {
-                            double p = precipSumArray.getDouble(i);
+                        if (precipSumArray != null && dataIdx < precipSumArray.length()) {
+                            double p = precipSumArray.getDouble(dataIdx);
                             if (useImperial) {
                                 double pIn = p * 0.0393701;
                                 dayPrecips[i].setText(String.format(Locale.getDefault(), "Precip: %.2f in", pIn));
@@ -289,10 +297,21 @@ public class SunActivity extends AppCompatActivity {
                         }
 
                         // Wind
-                        if (windDirArray != null) {
-                            double w = windDirArray.getDouble(i);
+                        if (windDirArray != null && dataIdx < windDirArray.length()) {
+                            double w = windDirArray.getDouble(dataIdx);
                             String dir = getCardinalDirection(w);
-                            dayWinds[i].setText("Wind: " + dir);
+                            
+                            if (windGustsArray != null && dataIdx < windGustsArray.length()) {
+                                double maxGustKmh = windGustsArray.getDouble(dataIdx);
+                                if (useImperial) {
+                                    double maxGustMph = maxGustKmh * 0.621371;
+                                    dayWinds[i].setText(String.format(Locale.getDefault(), "Wind Gusts: %.1f mph %s", maxGustMph, dir));
+                                } else {
+                                    dayWinds[i].setText(String.format(Locale.getDefault(), "Wind Gusts: %.1f km/h %s", maxGustKmh, dir));
+                                }
+                            } else {
+                                dayWinds[i].setText("Wind Gusts: " + dir);
+                            }
                         }
                     }
                 }
@@ -330,6 +349,7 @@ public class SunActivity extends AppCompatActivity {
             textColor = ContextCompat.getColor(this, R.color.primary_text);
         }
 
+        if (textWeatherHeader != null) textWeatherHeader.setTextColor(textColor);
         if (textSunrise != null) textSunrise.setTextColor(textColor);
         if (textSunset != null) textSunset.setTextColor(textColor);
         if (textWindGusts != null) textWindGusts.setTextColor(textColor);

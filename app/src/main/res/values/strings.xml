@@ -67,8 +67,8 @@
     
     <string name="sunrise_label">Sunrise: %s</string>
     <string name="sunset_label">Sunset: %s</string>
-    <string name="max_gusts_format_imperial">Max Gusts (24h): %.1f mph</string>
-    <string name="max_gusts_format_metric">Max Gusts (24h): %.1f km/h</string>
+    <string name="max_gusts_format_imperial">Wind Gusts: %.1f mph %s</string>
+    <string name="max_gusts_format_metric">Wind Gusts: %.1f km/h %s</string>
     <string name="sunshine_rolling_format">Sunshine (next 24h): %1$.1f hrs (%2$.0f%%)</string>
     <string name="cloud_cover_format">Cloud Cover (24h avg): %.0f%%</string>
     <string name="no_location_fix">No location fix. Please refresh GPS on the main screen.</string>
