@@ -1,28 +1,19 @@
 # Release Notes
 
-## Version 2.11 (Build 22)
-
-### Improvements
-- **Wheel Height Adjust UI:** 
-    - Added a visual vehicle diagram with a rounded chassis and orientation indicators.
-    - Improved layout with clear wheel labels (**FL, FR, BL, BR**) and teal-colored shim values.
-    - Switched metric shim suggestions from millimeters to **centimeters** for better readability.
-- **Settings Refinement:**
-    - Replaced the "Done" button with a cleaner "**Save & Close**" text link.
-    - Ensured consistent teal styling for all navigation links.
-- **Night Mode:** Enhanced visibility and consistency of colors across all new UI elements.
-
 ## Version 2.10 (Build 21)
 
 ### New Features
-- **Wheel Height Adjustment:** Calculate exactly how much to shim each wheel (in cm or inches) to level your vehicle. Includes a \"2S delayed recalculate\" feature to average readings for maximum precision.
+- **Wheel Height Adjustment:** 
+    - Calculate exactly how much to shim each wheel (in cm or inches) to level your vehicle. 
+    - Features a visual vehicle diagram with orientation indicators for easy setup.
+    - Includes a \"2S delayed recalculate\" averaging feature for maximum precision.
 - **In-App Guide:** A comprehensive manual is now available on first launch and via the Settings menu to explain all app features.
 
 ### Improvements
 - **UI Refinement:**
     - Settings screen now uses clean text links for \"Help\" and \"Save & Close\".
     - Improved edge-of-screen padding for better usability with phone cases.
-    - Consistently styled buttons and links across all screens.
+    - Consistently styled teal links and buttons across all screens.
 - **Bug Fixes:**
     - Resolved a startup crash related to Edge-to-Edge display on certain Android versions.
     - Improved stability of the \"More data\" screen when location is unavailable.
