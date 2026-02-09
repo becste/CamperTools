@@ -7,10 +7,13 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -28,19 +31,16 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
     private static final String PREFS = "campertools_prefs";
     private static final String PREF_WHEELBASE = "pref_wheelbase";
     private static final String PREF_TRACK_WIDTH = "pref_track_width";
-    private static final float ALPHA = 0.12f; // Filter factor
 
     private EditText inputWheelbase;
     private EditText inputTrackWidth;
     private TextView textFL, textFR, textBL, textBR;
     private TextView textFrontLabel, textHeader, textClose;
     private TextView labelWheelbase, labelTrackWidth;
+    private Button buttonRecalculate;
 
     private SensorManager sensorManager;
     private Sensor accelerometer;
-    private final float[] gravity = new float[3];
-    private final float[] filteredGravity = new float[3];
-    private boolean hasGravity = false;
 
     private float pitchOffsetDeg = 0f;
     private float rollOffsetDeg = 0f;
@@ -50,15 +50,26 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
     private float wheelbase = 0f;
     private float trackWidth = 0f;
 
+    // Measurement State
+    private boolean isMeasuring = false;
+    private double accX = 0;
+    private double accY = 0;
+    private int sampleCount = 0;
+    
+    // Locked Values (Normalized -1..1)
+    private float lockedNormX = 0f;
+    private float lockedNormY = 0f;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_wheel_adjust);
 
+        final int padding = (int) (16 * getResources().getDisplayMetrics().density);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout), (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+            v.setPadding(insets.left + padding, insets.top + padding, insets.right + padding, insets.bottom + padding);
             return WindowInsetsCompat.CONSUMED;
         });
 
@@ -73,8 +84,10 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         textClose = findViewById(R.id.textClose);
         labelWheelbase = findViewById(R.id.labelWheelbase);
         labelTrackWidth = findViewById(R.id.labelTrackWidth);
+        buttonRecalculate = findViewById(R.id.buttonRecalculate);
 
         textClose.setOnClickListener(v -> finish());
+        buttonRecalculate.setOnClickListener(v -> startMeasurement());
 
         // Load Intent Extras
         if (getIntent() != null) {
@@ -82,6 +95,8 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             rollOffsetDeg = getIntent().getFloatExtra(SettingsActivity.EXTRA_ROLL_OFFSET_DEG, 0f);
             useImperial = getIntent().getBooleanExtra(SettingsActivity.EXTRA_USE_IMPERIAL, false);
             useNightMode = getIntent().getBooleanExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, false);
+            lockedNormX = getIntent().getFloatExtra("EXTRA_START_NORM_X", 0f);
+            lockedNormY = getIntent().getFloatExtra("EXTRA_START_NORM_Y", 0f);
         }
 
         // Load Prefs
@@ -101,7 +116,7 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             @Override
             public void afterTextChanged(Editable s) {
                 saveDimensions();
-                calculateAdjustments();
+                calculateAdjustments(lockedNormX, lockedNormY);
             }
         };
         inputWheelbase.addTextChangedListener(watcher);
@@ -114,6 +129,48 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
 
         applyNightMode();
         applyUnits();
+        
+        // Initial Calc
+        calculateAdjustments(lockedNormX, lockedNormY);
+    }
+
+    private void startMeasurement() {
+        if (isMeasuring) return;
+        isMeasuring = true;
+        buttonRecalculate.setEnabled(false);
+        buttonRecalculate.setText("Measuring...");
+        
+        accX = 0;
+        accY = 0;
+        sampleCount = 0;
+        
+        if (sensorManager != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+        
+        new Handler(Looper.getMainLooper()).postDelayed(this::stopMeasurement, 2000);
+    }
+
+    private void stopMeasurement() {
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(this);
+        }
+        
+        if (sampleCount > 0) {
+            // Average acceleration
+            double avgX = accX / sampleCount;
+            double avgY = accY / sampleCount;
+            
+            // Normalize
+            lockedNormX = (float) (avgX / SensorManager.GRAVITY_EARTH);
+            lockedNormY = (float) (avgY / SensorManager.GRAVITY_EARTH);
+            
+            calculateAdjustments(lockedNormX, lockedNormY);
+        }
+        
+        isMeasuring = false;
+        buttonRecalculate.setEnabled(true);
+        buttonRecalculate.setText(R.string.recalculate_button);
     }
 
     private void applyUnits() {
@@ -121,8 +178,8 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             labelWheelbase.setText("Wheelbase (inches)");
             labelTrackWidth.setText("Track Width (inches)");
         } else {
-            labelWheelbase.setText("Wheelbase (mm)");
-            labelTrackWidth.setText("Track Width (mm)");
+            labelWheelbase.setText("Wheelbase (cm)");
+            labelTrackWidth.setText("Track Width (cm)");
         }
     }
 
@@ -145,9 +202,7 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
     @Override
     protected void onResume() {
         super.onResume();
-        if (sensorManager != null && accelerometer != null) {
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
-        }
+        // No automatic sensor registration
     }
 
     @Override
@@ -156,22 +211,17 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
+        isMeasuring = false;
+        buttonRecalculate.setEnabled(true);
+        buttonRecalculate.setText(R.string.recalculate_button);
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            if (!hasGravity) {
-                System.arraycopy(event.values, 0, filteredGravity, 0, 3);
-                hasGravity = true;
-            } else {
-                // Low-pass filter
-                filteredGravity[0] += ALPHA * (event.values[0] - filteredGravity[0]);
-                filteredGravity[1] += ALPHA * (event.values[1] - filteredGravity[1]);
-                filteredGravity[2] += ALPHA * (event.values[2] - filteredGravity[2]);
-            }
-            System.arraycopy(filteredGravity, 0, gravity, 0, 3);
-            calculateAdjustments();
+            accX += event.values[0];
+            accY += event.values[1];
+            sampleCount++;
         }
     }
 
@@ -179,79 +229,24 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
     }
 
-    private void calculateAdjustments() {
-        if (!hasGravity) return;
-
-        float g = SensorManager.GRAVITY_EARTH;
-        float normX = gravity[0] / g;
-        float normY = gravity[1] / g;
-
+    private void calculateAdjustments(float normX, float normY) {
         if (normX > 1f) normX = 1f;
         if (normX < -1f) normX = -1f;
         if (normY > 1f) normY = 1f;
         if (normY < -1f) normY = -1f;
 
-        // Apply offsets (same logic as MainActivity)
+        // Apply offsets
         float offsetPitchNorm = (float) Math.sin(Math.toRadians(pitchOffsetDeg));
         float offsetRollNorm = (float) Math.sin(Math.toRadians(rollOffsetDeg));
 
         float adjustedX = clampUnit(normX - offsetRollNorm);
         float adjustedY = clampUnit(normY - offsetPitchNorm);
 
-        // Calculate pitch and roll angles in radians
-        // Note: MainActivity uses:
-        // double pitchDeg = -Math.asin(adjustedY) * 180.0 / Math.PI;
-        // double rollDeg = Math.asin(adjustedX) * 180.0 / Math.PI;
-        
-        // We use radians for calc
-        double pitchRad = -Math.asin(adjustedY);
-        double rollRad = Math.asin(adjustedX);
-
-        // Heights relative to center (0,0)
-        // Pitch: Positive Pitch (Front Up?) -> Wait.
-        // MainActivity: -asin(y). If phone top tilts up, y is positive? No, standard Android: Y points UP.
-        // If top tilts back (screen up), Y is positive.
-        // Let's verify standard orientation:
-        // Lying flat: Z=9.8.
-        // Tilt top up (pitch up): Y increases (positive).
-        // MainActivity pitchDeg = -asin(Y). So Positive Y -> Negative PitchDeg.
-        // Negative PitchDeg -> Nose Down?
-        // Standard convention: Pitch Up is positive.
-        // So if Top tilts Up, PitchDeg is negative. That seems inverted relative to standard "Nose Up".
-        // BUT, let's stick to the visual:
-        // If Top tilts UP, Y > 0. PitchDeg < 0.
-        // If Top tilts UP, the Front Wheels are HIGHER.
-        // So Front Height should be Positive.
-        
-        // Front Height = (WB/2) * sin(-pitchRad)?
-        // If PitchDeg < 0 (Top Up), we want Front Height > 0.
-        // sin(PitchDeg) is negative.
-        // So we need -(WB/2) * sin(PitchDeg).
-        // Or simply: (WB/2) * sin(AngleOfElevation).
-        // AngleOfElevation of phone top = asin(adjustedY).
-        // So Front Height ~ adjustedY.
-        
-        // Let's verify:
-        // Top tilts UP -> adjustedY > 0. Front is HIGH.
-        // Height_Front = (wheelbase / 2.0) * (adjustedY); (approx sin theta = Y/g)
-        // Height_Rear = -(wheelbase / 2.0) * (adjustedY);
-        
-        // Roll:
-        // Tilt Right side down -> X decreases?
-        // Standard: X points Right.
-        // Tilt Right Down -> X < 0.
-        // MainActivity rollDeg = asin(X). So X < 0 -> Roll < 0.
-        // If Right is Down, Right Height should be Negative.
-        // Height_Right = (trackWidth / 2.0) * (adjustedX); (since X < 0 -> Height < 0).
-        // Height_Left = -(trackWidth / 2.0) * (adjustedX);
-        
-        // Using actual sin(asin(val)) = val. So we can just use adjustedX/Y directly if we assume they are sine components.
-        // Yes, adjustedX IS the sine of the angle (normalized gravity component).
-        
-        double hFront = (wheelbase / 2.0) * adjustedY; // Positive if Top Up
+        // Height Calculation
+        double hFront = (wheelbase / 2.0) * adjustedY;
         double hRear = -(wheelbase / 2.0) * adjustedY;
         
-        double hRight = (trackWidth / 2.0) * adjustedX; // Positive if Right Up
+        double hRight = (trackWidth / 2.0) * adjustedX;
         double hLeft = -(trackWidth / 2.0) * adjustedX;
 
         // Corners
@@ -260,7 +255,7 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         double hBL = hRear + hLeft;
         double hBR = hRear + hRight;
 
-        // We want to raise the low ones to match the highest one.
+        // Shim = difference from MAX
         double maxH = Math.max(Math.max(hFL, hFR), Math.max(hBL, hBR));
 
         double shimFL = maxH - hFL;
@@ -275,13 +270,10 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
     }
 
     private void updateWheelText(TextView view, double val) {
-        // Val is in same units as dimensions (mm or inches)
-        // If using Imperial, dimensions are inches -> val is inches.
-        // If Metric, dimensions are mm -> val is mm.
         if (useImperial) {
             view.setText(String.format(Locale.US, "%.1f\"", val));
         } else {
-            view.setText(String.format(Locale.US, "%.0f mm", val));
+            view.setText(String.format(Locale.US, "%.1f cm", val));
         }
     }
 
@@ -336,5 +328,9 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         if (textBR != null) textBR.setTextColor(textColor);
         
         if (textClose != null) textClose.setTextColor(useNightMode ? textColor : ContextCompat.getColor(this, R.color.teal_200));
+        
+        if (buttonRecalculate != null) {
+            buttonRecalculate.setTextColor(useNightMode ? textColor : ContextCompat.getColor(this, android.R.color.white));
+        }
     }
 }

@@ -164,11 +164,18 @@
 
     </RelativeLayout>
 
+    <Button
+        android:id="@+id/buttonRecalculate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/recalculate_button" />
+
     <TextView
         android:id="@+id/textClose"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="16dp"
         android:text="@string/close_button"
         android:textColor="@color/teal_200"
         android:padding="16dp"

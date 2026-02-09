@@ -41,6 +41,16 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".WheelAdjustActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".HelpActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
     </application>
 
 </manifest>

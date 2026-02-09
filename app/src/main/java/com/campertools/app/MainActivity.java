@@ -84,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String PREF_ROLL_OFFSET_DEG = "pref_roll_offset_deg";
     private static final String PREF_USE_IMPERIAL = "pref_use_imperial";
     private static final String PREF_USE_NIGHT_MODE = "pref_use_night_mode";
+    private static final String PREF_FIRST_LAUNCH = "pref_first_launch";
     private static final long WEATHER_CACHE_WINDOW_MS = 60_000L;
     private static final long LOCATION_TIMEOUT_MS = 12_000L;
 
@@ -260,6 +261,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 intent.putExtra(SettingsActivity.EXTRA_ROLL_OFFSET_DEG, rollOffsetDeg);
                 intent.putExtra(SettingsActivity.EXTRA_USE_IMPERIAL, useImperial);
                 intent.putExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, useNightMode);
+                intent.putExtra("EXTRA_START_NORM_X", smoothNormX);
+                intent.putExtra("EXTRA_START_NORM_Y", smoothNormY);
                 startActivity(intent);
             });
         }
@@ -365,6 +368,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (cachedLocation == null) {
             pendingWeather = false;
             checkPermissionAndProceed();
+        }
+
+        // First Launch Help
+        if (prefs.getBoolean(PREF_FIRST_LAUNCH, true)) {
+            startActivity(new Intent(this, HelpActivity.class));
+            prefs.edit().putBoolean(PREF_FIRST_LAUNCH, false).apply();
         }
 
         // Ensure initial mode visibility

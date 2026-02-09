@@ -38,12 +38,13 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
     private TextView textPitchLabel;
     private TextView textRollLabel;
     private TextView textUnitsHeader;
+    private TextView textHelpLink; // Add
     private EditText inputPitchOffset;
     private EditText inputRollOffset;
     private Button buttonAutoCalibrate;
     private SwitchMaterial switchUnits;
     private SwitchMaterial switchNightMode;
-    private Button buttonBack;
+    private TextView buttonBack; // Changed from Button
     private boolean useImperial = false;
     private boolean useNightMode = false;
 
@@ -58,9 +59,10 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_settings);
 
+        final int padding = (int) (16 * getResources().getDisplayMetrics().density);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout), (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+            v.setPadding(insets.left + padding, insets.top + padding, insets.right + padding, insets.bottom + padding);
             return WindowInsetsCompat.CONSUMED;
         });
 
@@ -74,6 +76,7 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         switchUnits = findViewById(R.id.switchUnits);
         switchNightMode = findViewById(R.id.switchNightMode);
         buttonBack = findViewById(R.id.buttonBack);
+        textHelpLink = findViewById(R.id.textHelpLink);
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
@@ -108,6 +111,12 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
             buttonBack.setOnClickListener(v -> {
                 saveSettings();
                 finish();
+            });
+        }
+        
+        if (textHelpLink != null) {
+            textHelpLink.setOnClickListener(v -> {
+                startActivity(new Intent(this, HelpActivity.class));
             });
         }
 
@@ -160,8 +169,11 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         if (switchUnits != null) switchUnits.setTextColor(textColor);
         if (switchNightMode != null) switchNightMode.setTextColor(textColor);
         
-        if (buttonAutoCalibrate != null) buttonAutoCalibrate.setTextColor(textColor);
-        if (buttonBack != null) buttonBack.setTextColor(textColor);
+        if (buttonAutoCalibrate != null) buttonAutoCalibrate.setTextColor(useNightMode ? textColor : ContextCompat.getColor(this, android.R.color.white));
+        
+        int linkColor = useNightMode ? textColor : ContextCompat.getColor(this, R.color.teal_200);
+        if (buttonBack != null) buttonBack.setTextColor(linkColor);
+        if (textHelpLink != null) textHelpLink.setTextColor(linkColor);
     }
 
     private void saveSettings() {

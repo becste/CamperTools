@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/textTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/help_title"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Main Screen -->
+            <TextView
+                android:id="@+id/textHeaderMain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_main_title"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:id="@+id/textBodyMain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_main_text"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Weather Details -->
+            <TextView
+                android:id="@+id/textHeaderWeather"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_weather_title"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:id="@+id/textBodyWeather"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_weather_text"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Height Adjust -->
+            <TextView
+                android:id="@+id/textHeaderHeight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_height_adjust_title"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:id="@+id/textBodyHeight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_height_adjust_text"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Settings -->
+            <TextView
+                android:id="@+id/textHeaderSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_settings_title"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:id="@+id/textBodySettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_section_settings_text"
+                android:textSize="16sp"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Note -->
+            <TextView
+                android:id="@+id/textHelpNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/help_note"
+                android:textStyle="italic"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/buttonClose"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/close_button" />
+
+</LinearLayout>

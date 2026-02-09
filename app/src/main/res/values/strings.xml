@@ -39,7 +39,7 @@
     <string name="settings_title">Level Settings</string>
     <string name="open_settings">Settings</string>
     <string name="save_settings">Save</string>
-    <string name="back">Done</string>
+    <string name="back">Save &amp; Close</string>
     <string name="close_button">Close</string>
     <string name="extra_data_link">More data</string>
     <string name="flashlight_toggle">Flashlight</string>
@@ -84,4 +84,22 @@
     <string name="wheel_bl">BL</string>
     <string name="wheel_br">BR</string>
     <string name="set_dimensions_hint">Set Dimensions</string>
+    <string name="recalculate_button">2S delayed recalculate</string>
+    
+    <!-- Help / Manual -->
+    <string name="help_title">CamperTools Guide</string>
+    <string name="help_link">Help</string>
+    <string name="help_note">You can view this guide again in the Settings menu.</string>
+    
+    <string name="help_section_main_title">Main Screen</string>
+    <string name="help_section_main_text">Check your Elevation and GPS status. View current Temperature, Wind, and Precipitation. Tap \'More data\' for a 3-day forecast. Use the switch to toggle between Level and Compass views. Check Pitch &amp; Roll on the level, or tap \'Height Adjust\' for wheel shim calculations. Shake your device to toggle the Flashlight.</string>
+    
+    <string name="help_section_weather_title">Weather Details</string>
+    <string name="help_section_weather_text">Tap \'More data\' for a 3-day forecast, sunrise/sunset times, and cloud cover info.</string>
+
+    <string name="help_section_height_adjust_title">Height Adjust</string>
+    <string name="help_section_height_adjust_text">Tap \'Height Adjust\' next to the level. Enter your vehicle\'s Wheelbase and Track Width. Tap \'2S delayed recalculate\' to get a fix on the current readings and a height adjustment recommendation.</string>
+
+    <string name="help_section_settings_title">Settings</string>
+    <string name="help_section_settings_text">In the Settings menu, you can calibrate the level (manually or auto), toggle \'Night Mode\' for a red-light interface, and switch between Metric and Imperial units.</string>
 </resources>

@@ -5,13 +5,15 @@
 ## ✨ Features
 
 *   **📏 Leveling Tool:** Precise 2-axis bubble level with visual guides. **Pitch & Roll** readout. **Dual-Axis Auto-calibrate** (Pitch & Roll in degrees) to offset your phone's camera bump or uneven surfaces.
+*   **📐 Wheel Height Adjust:** Input your vehicle's dimensions to calculate the exact shim height needed for each wheel (**FL, FR, BL, BR**) to achieve a perfect level.
 *   **🔦 Shake to Light:** Toggle the flashlight on/off simply by shaking your device (works even when using other tools in the app).
 *   **🔴 Night Mode:** Full **red-light interface** across all screens (Settings, Weather, Level) to preserve your night vision.
+*   **📖 In-App Guide:** Comprehensive manual explaining all features, available on first startup or anytime via Settings.
 *   **🧭 Compass:** Smooth, filtered compass heading.
 *   **🌤️ Weather Forecast:**
     *   Instant current conditions (Temp & Wind Speed/Direction).
     *   **Rolling 24-hour forecast** for temperature (min/max), wind gusts, and precipitation.
-    *   **3-Day Forecast** (Daily highs/lows, precip, wind) in the "More Data" view.
+    *   **3-Day Forecast** (Daily highs/lows, precip, wind) in the \"More Data\" view.
     *   Powered by [Open-Meteo](https://open-meteo.com/).
 *   **⚙️ Customization:** Toggle Imperial/Metric units, enable Night Mode, and calibrate sensors in the redesigned Settings menu.
 

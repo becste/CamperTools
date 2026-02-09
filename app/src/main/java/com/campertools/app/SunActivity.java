@@ -103,7 +103,7 @@ public class SunActivity extends AppCompatActivity {
             if (cachedLocation != null) {
                 fetchSunData(cachedLocation);
             } else {
-                textSunStatus.setText(getString(R.string.no_location_fix));
+                textSunStatus.setText("");
             }
         }
     }
