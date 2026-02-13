@@ -18,3 +18,11 @@ local.properties
 .idea/
 app/build/
 *.hprof
+
+# Legacy/generated Android artifacts
+/bin/
+/gen/
+/src/
+/app/release/
+*.apk
+*.aab

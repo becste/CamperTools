@@ -13,7 +13,7 @@
         android:orientation="vertical"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="16dp"
+        android:paddingBottom="8dp"
         android:paddingTop="48dp"
         android:gravity="center_horizontal">
 
@@ -21,7 +21,7 @@
             android:id="@+id/textWeatherHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Detailed Weather"
+            android:text="@string/detailed_weather"
             android:textSize="24sp"
             android:textStyle="bold"
             android:layout_marginBottom="24dp"/>
@@ -37,7 +37,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="18sp"
-                android:text="Sunrise: –" />
+                android:text="@string/sunrise_placeholder" />
 
             <TextView
                 android:id="@+id/textSunset"
@@ -45,7 +45,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="24dp"
                 android:textSize="18sp"
-                android:text="Sunset: –" />
+                android:text="@string/sunset_placeholder" />
         </LinearLayout>
 
         <TextView
@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:textSize="18sp"
-            android:text="Max Gusts (24h): –" />
+            android:text="@string/max_gusts_placeholder" />
 
         <TextView
             android:id="@+id/textSunshine"
@@ -62,7 +62,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:textSize="18sp"
-            android:text="Sunshine (24h): –" />
+            android:text="@string/sunshine_placeholder" />
 
         <TextView
             android:id="@+id/textCloudCover"
@@ -70,7 +70,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:textSize="18sp"
-            android:text="Cloud Cover (avg): –" />
+            android:text="@string/cloud_cover_placeholder" />
 
         <!-- Forecast Section -->
         <View
@@ -85,7 +85,7 @@
             android:id="@+id/textForecastHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="3-Day Forecast"
+            android:text="@string/forecast_header"
             android:textSize="20sp"
             android:textStyle="bold"
             android:layout_marginBottom="12dp"/>
@@ -102,7 +102,7 @@
                 android:id="@+id/textDay0Date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Today"
+                android:text="@string/today_label"
                 android:textSize="18sp"
                 android:textStyle="bold" />
             
@@ -110,21 +110,21 @@
                 android:id="@+id/textDay0Temp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Min / Max"
+                android:text="@string/min_max_label"
                 android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/textDay0Precip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Precip"
+                android:text="@string/precip_short"
                 android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/textDay0Wind"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wind"
+                android:text="@string/wind_short"
                 android:textSize="16sp" />
         </LinearLayout>
 
@@ -140,7 +140,7 @@
                 android:id="@+id/textDay1Date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Tomorrow"
+                android:text="@string/tomorrow_label"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -148,21 +148,21 @@
                 android:id="@+id/textDay1Temp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Min / Max"
+                android:text="@string/min_max_label"
                 android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/textDay1Precip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Precip"
+                android:text="@string/precip_short"
                 android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/textDay1Wind"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wind"
+                android:text="@string/wind_short"
                 android:textSize="16sp" />
         </LinearLayout>
 
@@ -178,7 +178,7 @@
                 android:id="@+id/textDay2Date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Date"
+                android:text="@string/date_label"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -186,32 +186,34 @@
                 android:id="@+id/textDay2Temp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Min / Max"
+                android:text="@string/min_max_label"
                 android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/textDay2Precip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Precip"
+                android:text="@string/precip_short"
                 android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/textDay2Wind"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wind"
+                android:text="@string/wind_short"
                 android:textSize="16sp" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/textSunStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Getting location..."/>
-
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/textSunStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:text="@string/getting_location"/>
 
     <!-- Fixed Bottom Button -->
     <TextView

@@ -12,7 +12,6 @@ import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -49,29 +48,26 @@ import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.ProductDetails;
-import com.android.billingclient.api.ProductDetailsResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.QueryProductDetailsParams;
+import com.campertools.app.weather.OpenMeteoClient;
+import com.campertools.app.weather.WeatherNowParser;
+import com.campertools.app.weather.WeatherNowSnapshot;
+import com.campertools.app.weather.WeatherUnits;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private static final int REQUEST_LOCATION_PERMISSION = 1001;
     private static final int REQUEST_CAMERA_PERMISSION = 1003;
-    private static final int REQUEST_SETTINGS = 2001;
     private static final String DONATION_PRODUCT_ID = "donationcoffee";
     private static final float ACCEL_ALPHA = 0.12f;
     private static final float MAG_ALPHA = 0.10f;
@@ -79,12 +75,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final float AZIMUTH_ALPHA = 0.18f;
     private static final String STATE_PITCH_OFFSET_DEG = "state_pitch_offset_deg";
     private static final String STATE_ROLL_OFFSET_DEG = "state_roll_offset_deg";
-    private static final String PREFS = "campertools_prefs";
-    private static final String PREF_PITCH_OFFSET_DEG = "pref_pitch_offset_deg";
-    private static final String PREF_ROLL_OFFSET_DEG = "pref_roll_offset_deg";
-    private static final String PREF_USE_IMPERIAL = "pref_use_imperial";
-    private static final String PREF_USE_NIGHT_MODE = "pref_use_night_mode";
-    private static final String PREF_FIRST_LAUNCH = "pref_first_launch";
     private static final long WEATHER_CACHE_WINDOW_MS = 60_000L;
     private static final long LOCATION_TIMEOUT_MS = 12_000L;
 
@@ -173,6 +163,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private LocationCallback pendingLocationCallback;
     private Runnable pendingLocationTimeout;
     private ActivityResultLauncher<Intent> settingsLauncher;
+    private final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
+    private Future<?> pendingWeatherTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -198,12 +190,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         useImperial = data.getBooleanExtra(SettingsActivity.EXTRA_USE_IMPERIAL, false);
                         useNightMode = data.getBooleanExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, false);
 
-                        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+                        SharedPreferences prefs = getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE);
                         prefs.edit()
-                                .putFloat(PREF_PITCH_OFFSET_DEG, pitchOffsetDeg)
-                                .putFloat(PREF_ROLL_OFFSET_DEG, rollOffsetDeg)
-                                .putBoolean(PREF_USE_IMPERIAL, useImperial)
-                                .putBoolean(PREF_USE_NIGHT_MODE, useNightMode)
+                                .putFloat(AppPrefs.PREF_PITCH_OFFSET_DEG, pitchOffsetDeg)
+                                .putFloat(AppPrefs.PREF_ROLL_OFFSET_DEG, rollOffsetDeg)
+                                .putBoolean(AppPrefs.PREF_USE_IMPERIAL, useImperial)
+                                .putBoolean(AppPrefs.PREF_USE_NIGHT_MODE, useNightMode)
                                 .apply();
                         updateTiltAndCompass();
                         refreshAllDisplays();
@@ -212,17 +204,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
         );
 
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE);
         if (savedInstanceState != null) {
             pitchOffsetDeg = savedInstanceState.getFloat(STATE_PITCH_OFFSET_DEG, 0f);
             rollOffsetDeg = savedInstanceState.getFloat(STATE_ROLL_OFFSET_DEG, 0f);
-            useImperial = prefs.getBoolean(PREF_USE_IMPERIAL, false);
-            useNightMode = prefs.getBoolean(PREF_USE_NIGHT_MODE, false);
+            useImperial = prefs.getBoolean(AppPrefs.PREF_USE_IMPERIAL, false);
+            useNightMode = prefs.getBoolean(AppPrefs.PREF_USE_NIGHT_MODE, false);
         } else {
-            pitchOffsetDeg = prefs.getFloat(PREF_PITCH_OFFSET_DEG, 0f);
-            rollOffsetDeg = prefs.getFloat(PREF_ROLL_OFFSET_DEG, 0f);
-            useImperial = prefs.getBoolean(PREF_USE_IMPERIAL, false);
-            useNightMode = prefs.getBoolean(PREF_USE_NIGHT_MODE, false);
+            pitchOffsetDeg = prefs.getFloat(AppPrefs.PREF_PITCH_OFFSET_DEG, 0f);
+            rollOffsetDeg = prefs.getFloat(AppPrefs.PREF_ROLL_OFFSET_DEG, 0f);
+            useImperial = prefs.getBoolean(AppPrefs.PREF_USE_IMPERIAL, false);
+            useNightMode = prefs.getBoolean(AppPrefs.PREF_USE_NIGHT_MODE, false);
         }
 
         // Elevation UI
@@ -261,8 +253,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 intent.putExtra(SettingsActivity.EXTRA_ROLL_OFFSET_DEG, rollOffsetDeg);
                 intent.putExtra(SettingsActivity.EXTRA_USE_IMPERIAL, useImperial);
                 intent.putExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, useNightMode);
-                intent.putExtra("EXTRA_START_NORM_X", smoothNormX);
-                intent.putExtra("EXTRA_START_NORM_Y", smoothNormY);
+                intent.putExtra(AppExtras.EXTRA_START_NORM_X, smoothNormX);
+                intent.putExtra(AppExtras.EXTRA_START_NORM_Y, smoothNormY);
                 startActivity(intent);
             });
         }
@@ -293,7 +285,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (switchCompass != null) {
             if (magnetometer == null) {
                 switchCompass.setEnabled(false);
-                Toast.makeText(this, "Compass sensor unavailable on this device", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.compass_unavailable, Toast.LENGTH_LONG).show();
             } else {
                 switchCompass.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
@@ -347,7 +339,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View view) {
                 Intent intent = new Intent(MainActivity.this, SunActivity.class);
                 if (lastJsonWeather != null) {
-                    intent.putExtra("weather_json", lastJsonWeather);
+                    intent.putExtra(AppExtras.EXTRA_WEATHER_JSON, lastJsonWeather);
                 }
                 startActivity(intent);
             }
@@ -371,9 +363,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         // First Launch Help
-        if (prefs.getBoolean(PREF_FIRST_LAUNCH, true)) {
+        if (prefs.getBoolean(AppPrefs.PREF_FIRST_LAUNCH, true)) {
             startActivity(new Intent(this, HelpActivity.class));
-            prefs.edit().putBoolean(PREF_FIRST_LAUNCH, false).apply();
+            prefs.edit().putBoolean(AppPrefs.PREF_FIRST_LAUNCH, false).apply();
         }
 
         // Ensure initial mode visibility
@@ -383,7 +375,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void initFlashlight() {
         boolean hasFlash = getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
-        if (!hasFlash) {
+        if (!hasFlash || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             switchFlashlight.setEnabled(false);
             seekBrightness.setVisibility(View.GONE);
             return;
@@ -441,6 +433,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void turnOnFlashlight() {
+        if (cameraManager == null || cameraId == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            flashlightOn = false;
+            return;
+        }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && maxBrightnessLevel > 1) {
                 int level = seekBrightness.getProgress() + 1;
@@ -457,6 +453,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void turnOffFlashlight() {
+        if (cameraManager == null || cameraId == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            flashlightOn = false;
+            return;
+        }
         try {
             cameraManager.setTorchMode(cameraId, false);
             flashlightOn = false;
@@ -467,6 +467,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void setFlashlightBrightness(int level) {
+        if (cameraManager == null || cameraId == null) {
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && maxBrightnessLevel > 1) {
             try {
                 // Level must be >= 1
@@ -584,7 +587,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             billingClient.launchBillingFlow(this, billingFlowParams);
         } else {
-            Toast.makeText(this, "Billing service not ready or product not found", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.billing_not_ready, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -712,7 +715,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 switchFlashlight.setChecked(true);
                 turnOnFlashlight();
             } else {
-                Toast.makeText(this, "Camera permission is required for the flashlight", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.camera_permission_required, Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -777,44 +780,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         textPrecip.setText(getString(R.string.precip_loading));
 
-        new Thread(() -> {
-            HttpURLConnection connection = null;
+        if (pendingWeatherTask != null) {
+            pendingWeatherTask.cancel(true);
+        }
+
+        pendingWeatherTask = networkExecutor.submit(() -> {
             try {
-                // Open-Meteo: hourly temp + precipitation + weathercode + extra data for SunActivity
-                String urlStr =
-                        "https://api.open-meteo.com/v1/forecast"
-                                + "?latitude=" + lat
-                                + "&longitude=" + lon
-                                + "&hourly=temperature_2m,precipitation,weathercode,winddirection_10m,cloudcover,sunshine_duration,is_day"
-                                + "&daily=sunrise,sunset,windgusts_10m_max,temperature_2m_max,temperature_2m_min,precipitation_sum,winddirection_10m_dominant,weathercode"
-                                + "&current_weather=true"
-                                + "&timezone=auto";
-
-                URL url = new URL(urlStr);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(10000);
-                connection.setRequestMethod("GET");
-
-                InputStream is = connection.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-                StringBuilder sb = new StringBuilder();
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
+                final String json = OpenMeteoClient.fetchForecastJson(lat, lon);
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
                 }
 
-                reader.close();
-                final String json = sb.toString();
                 lastJsonWeather = json;
                 lastWeatherFetchMs = System.currentTimeMillis();
                 lastWeatherKey = cacheKey;
 
                 final String[] resultTexts = parseWeatherJson(json);
-
                 runOnUiThread(() -> {
-                    if (isFinishing()) return;
+                    if (isFinishing() || isDestroyed()) return;
                     if (resultTexts != null) {
                         textWeatherNow.setText(resultTexts[0]);
                         textWeatherRange.setText(resultTexts[1]);
@@ -831,11 +814,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         textPrecip.setText(getString(R.string.precip_label));
                     }
                 });
-
-            } catch (final Exception e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
                 runOnUiThread(() -> {
-                    if (isFinishing()) return;
+                    if (isFinishing() || isDestroyed()) return;
                     textWeatherNow.setText(getString(R.string.weather_network_error));
                     textWeatherRange.setText(getString(R.string.weather_range_label));
                     if (textWind != null) {
@@ -843,204 +827,121 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                     textPrecip.setText(getString(R.string.precip_label));
                 });
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
             }
-        }).start();
+        });
     }
 
     private String[] parseWeatherJson(String json) {
-        try {
-            JSONObject root = new JSONObject(json);
-
-            JSONObject current = root.getJSONObject("current_weather");
-            double currentTemp = current.getDouble("temperature");
-            double currentWindSpeed = current.getDouble("windspeed");
-            double currentWindDir = current.getDouble("winddirection");
-
-            JSONObject hourly = root.getJSONObject("hourly");
-            JSONArray temps = hourly.getJSONArray("temperature_2m");
-            JSONArray precip = hourly.getJSONArray("precipitation");
-            JSONArray weathercode = hourly.getJSONArray("weathercode");
-            
-            // Calculate rolling 24h indices
-            java.util.Calendar calendar = java.util.Calendar.getInstance();
-            int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
-            
-            // Ensure we don't go out of bounds. Open-Meteo usually provides 7 days.
-            int maxLen = Math.min(temps.length(),
-                            Math.min(precip.length(), weathercode.length()));
-                                    
-            int startIdx = currentHour;
-            int endIdx = Math.min(maxLen, startIdx + 24);
-            
-            if (endIdx <= startIdx) {
-                return null;
-            }
-
-            double min = temps.getDouble(startIdx);
-            double max = temps.getDouble(startIdx);
-            double sumTemp = 0;
-            double sumPrecip = 0;
-
-            boolean anyPrecip = false;
-            boolean anySnowCode = false;
-            boolean anyThunderCode = false;
-            boolean anyFreezingCode = false;
-
-            int count = 0;
-            for (int i = startIdx; i < endIdx; i++) {
-                double t = temps.getDouble(i);
-                double p = precip.getDouble(i);
-                int code = weathercode.getInt(i);
-
-                if (t < min) min = t;
-                if (t > max) max = t;
-                sumTemp += t;
-                sumPrecip += p;
-
-                if (p > 0.05) {
-                    anyPrecip = true;
-                }
-                if (isSnowCode(code)) {
-                    anySnowCode = true;
-                }
-                if (isThunderCode(code)) {
-                    anyThunderCode = true;
-                }
-                if (isFreezingCode(code)) {
-                    anyFreezingCode = true;
-                }
-                count++;
-            }
-
-            if (count == 0) return null;
-            double avgTemp = sumTemp / count;
-
-            String nowText;
-            String rangeText;
-
-            if (useImperial) {
-                double currentTempF = (currentTemp * 9 / 5) + 32;
-                double minF = (min * 9 / 5) + 32;
-                double maxF = (max * 9 / 5) + 32;
-
-                nowText = String.format(
-                        Locale.getDefault(),
-                        getString(R.string.weather_now_format_imperial),
-                        currentTempF
-                );
-
-                rangeText = String.format(
-                        Locale.getDefault(),
-                        getString(R.string.weather_range_format_imperial),
-                        minF,
-                        maxF
-                );
-            } else {
-                nowText = String.format(
-                        Locale.getDefault(),
-                        getString(R.string.weather_now_format_metric),
-                        currentTemp
-                );
-
-                rangeText = String.format(
-                        Locale.getDefault(),
-                        getString(R.string.weather_range_format_metric),
-                        min,
-                        max
-                );
-            }
-
-            String windText;
-            String[] cardinal = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-            int dirIdx = directionBucketIndex(currentWindDir);
-            String dirStr = cardinal[dirIdx];
-
-            if (useImperial) {
-                double speedMph = currentWindSpeed * 0.621371;
-                windText = String.format(
-                        Locale.getDefault(),
-                        getString(R.string.wind_format_imperial),
-                        speedMph,
-                        dirStr
-                );
-            } else {
-                windText = String.format(
-                        Locale.getDefault(),
-                        getString(R.string.wind_format_metric),
-                        currentWindSpeed,
-                        dirStr
-                );
-            }
-
-            String precipText;
-            if (!anyPrecip || sumPrecip < 0.05) {
-                precipText = getString(R.string.precip_none);
-            } else {
-                String intensity;
-                if (sumPrecip < 1.0) {
-                    intensity = "very light";
-                } else if (sumPrecip < 5.0) {
-                    intensity = "light";
-                } else if (sumPrecip < 15.0) {
-                    intensity = "moderate";
-                } else {
-                    intensity = "heavy";
-                }
-
-                String type;
-                if (anyThunderCode) {
-                    type = "rain with thunderstorms";
-                } else if (anySnowCode || avgTemp <= 1.0) {
-                    type = "snow / wintry precipitation";
-                } else if (anyFreezingCode || (avgTemp > 1.0 && avgTemp < 3.0)) {
-                    type = "rain/snow mix possible";
-                } else {
-                    type = "rain";
-                }
-
-                if (useImperial) {
-                    double inches = sumPrecip * 0.0393701;
-                    precipText = String.format(
-                            Locale.getDefault(),
-                            getString(R.string.precip_format_imperial),
-                            intensity,
-                            type,
-                            inches
-                    );
-                } else {
-                    precipText = String.format(
-                            Locale.getDefault(),
-                            getString(R.string.precip_format_metric),
-                            intensity,
-                            type,
-                            sumPrecip
-                    );
-                }
-            }
-
-            return new String[]{nowText, rangeText, windText, precipText};
-
-        } catch (JSONException e) {
-            e.printStackTrace();
+        WeatherNowSnapshot snapshot = WeatherNowParser.parseCurrentAndNext24h(json, Calendar.getInstance());
+        if (snapshot == null) {
             return null;
+        }
+
+        String nowText;
+        String rangeText;
+        if (useImperial) {
+            nowText = String.format(
+                    Locale.getDefault(),
+                    getString(R.string.weather_now_format_imperial),
+                    WeatherUnits.celsiusToFahrenheit(snapshot.currentTempC)
+            );
+            rangeText = String.format(
+                    Locale.getDefault(),
+                    getString(R.string.weather_range_format_imperial),
+                    WeatherUnits.celsiusToFahrenheit(snapshot.minTempC),
+                    WeatherUnits.celsiusToFahrenheit(snapshot.maxTempC)
+            );
+        } else {
+            nowText = String.format(
+                    Locale.getDefault(),
+                    getString(R.string.weather_now_format_metric),
+                    snapshot.currentTempC
+            );
+            rangeText = String.format(
+                    Locale.getDefault(),
+                    getString(R.string.weather_range_format_metric),
+                    snapshot.minTempC,
+                    snapshot.maxTempC
+            );
+        }
+
+        String dirStr = WeatherUnits.cardinalDirection(snapshot.currentWindDirectionDeg);
+        String windText;
+        if (useImperial) {
+            windText = String.format(
+                    Locale.getDefault(),
+                    getString(R.string.wind_format_imperial),
+                    WeatherUnits.kmhToMph(snapshot.currentWindKmh),
+                    dirStr
+            );
+        } else {
+            windText = String.format(
+                    Locale.getDefault(),
+                    getString(R.string.wind_format_metric),
+                    snapshot.currentWindKmh,
+                    dirStr
+            );
+        }
+
+        String precipText;
+        if (!snapshot.anyPrecip || snapshot.sumPrecipMm < 0.05) {
+            precipText = getString(R.string.precip_none);
+        } else {
+            String intensity = getPrecipIntensityLabel(snapshot.sumPrecipMm);
+            String type = getPrecipTypeLabel(snapshot);
+            if (useImperial) {
+                precipText = String.format(
+                        Locale.getDefault(),
+                        getString(R.string.precip_format_imperial),
+                        intensity,
+                        type,
+                        WeatherUnits.mmToInches(snapshot.sumPrecipMm)
+                );
+            } else {
+                precipText = String.format(
+                        Locale.getDefault(),
+                        getString(R.string.precip_format_metric),
+                        intensity,
+                        type,
+                        snapshot.sumPrecipMm
+                );
+            }
+        }
+
+        return new String[]{nowText, rangeText, windText, precipText};
+    }
+
+    private String getPrecipIntensityLabel(double sumPrecipMm) {
+        switch (WeatherUnits.precipitationIntensityBucket(sumPrecipMm)) {
+            case WeatherUnits.PRECIP_INTENSITY_VERY_LIGHT:
+                return getString(R.string.precip_intensity_very_light);
+            case WeatherUnits.PRECIP_INTENSITY_LIGHT:
+                return getString(R.string.precip_intensity_light);
+            case WeatherUnits.PRECIP_INTENSITY_MODERATE:
+                return getString(R.string.precip_intensity_moderate);
+            case WeatherUnits.PRECIP_INTENSITY_HEAVY:
+            default:
+                return getString(R.string.precip_intensity_heavy);
         }
     }
 
-    private boolean isSnowCode(int code) {
-        return code == 71 || code == 73 || code == 75 || code == 77
-                || code == 85 || code == 86;
-    }
-
-    private boolean isThunderCode(int code) {
-        return code == 95 || code == 96 || code == 99;
-    }
-
-    private boolean isFreezingCode(int code) {
-        return code == 56 || code == 57 || code == 66 || code == 67;
+    private String getPrecipTypeLabel(WeatherNowSnapshot snapshot) {
+        switch (WeatherUnits.precipitationTypeBucket(
+                snapshot.avgTempC,
+                snapshot.anySnowCode,
+                snapshot.anyThunderCode,
+                snapshot.anyFreezingCode
+        )) {
+            case WeatherUnits.PRECIP_TYPE_THUNDERSTORM_RAIN:
+                return getString(R.string.precip_type_thunderstorm_rain);
+            case WeatherUnits.PRECIP_TYPE_SNOW:
+                return getString(R.string.precip_type_snow);
+            case WeatherUnits.PRECIP_TYPE_RAIN_SNOW_MIX:
+                return getString(R.string.precip_type_rain_snow_mix);
+            case WeatherUnits.PRECIP_TYPE_RAIN:
+            default:
+                return getString(R.string.precip_type_rain);
+        }
     }
 
     @Override
@@ -1072,10 +973,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
+        if (pendingWeatherTask != null) {
+            pendingWeatherTask.cancel(true);
+            pendingWeatherTask = null;
+        }
         cancelPendingLocationRequests();
         if (flashlightOn) {
             turnOffFlashlight();
             switchFlashlight.setChecked(false);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (pendingWeatherTask != null) {
+            pendingWeatherTask.cancel(true);
+            pendingWeatherTask = null;
+        }
+        networkExecutor.shutdownNow();
+        cancelPendingLocationRequests();
+        if (billingClient != null) {
+            billingClient.endConnection();
         }
     }
 
@@ -1369,11 +1288,32 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return;
         }
 
-        locationManager.requestSingleUpdate(
-                LocationManager.GPS_PROVIDER,
-                location -> handleLocationResult(forWeather, location),
-                Looper.getMainLooper()
-        );
+        boolean hasFineLocation = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+        if (!hasFineLocation) {
+            textStatus.setText(getString(R.string.permission_denied));
+            textWeatherNow.setText(getString(R.string.weather_permission_denied));
+            if (textWind != null) {
+                textWind.setText(getString(R.string.wind_label));
+            }
+            textPrecip.setText(getString(R.string.precip_label));
+            return;
+        }
+
+        try {
+            locationManager.requestSingleUpdate(
+                    LocationManager.GPS_PROVIDER,
+                    location -> handleLocationResult(forWeather, location),
+                    Looper.getMainLooper()
+            );
+        } catch (SecurityException ignored) {
+            textStatus.setText(getString(R.string.permission_denied));
+            textWeatherNow.setText(getString(R.string.weather_permission_denied));
+            if (textWind != null) {
+                textWind.setText(getString(R.string.wind_label));
+            }
+            textPrecip.setText(getString(R.string.precip_label));
+        }
     }
 
     private void handleLocationResult(boolean forWeather, Location location) {
@@ -1388,26 +1328,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    private float computeNormalizedOffset(float heightMm, float spanMm) {
-        float denom = (float) Math.sqrt(heightMm * heightMm + spanMm * spanMm);
-        if (denom == 0f) {
-            return 0f;
-        }
-        float normalized = heightMm / denom;
-        return clampUnit(normalized);
-    }
-
     private float clampUnit(float value) {
         if (value > 1f) return 1f;
         if (value < -1f) return -1f;
         return value;
-    }
-
-    private int directionBucketIndex(double deg) {
-        // Normalize degrees to [0,360)
-        double normalized = ((deg % 360.0) + 360.0) % 360.0;
-        // 8 buckets of 45 degrees, centered on N, NE, E...
-        int idx = (int) Math.round(normalized / 45.0) % 8;
-        return idx;
     }
 }

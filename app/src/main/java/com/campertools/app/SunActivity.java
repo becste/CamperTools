@@ -13,17 +13,18 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.campertools.app.weather.OpenMeteoClient;
+import com.campertools.app.weather.WeatherUnits;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class SunActivity extends AppCompatActivity {
 
@@ -47,6 +48,8 @@ public class SunActivity extends AppCompatActivity {
     private static String lastJsonSunData;
     private boolean useImperial = false;
     private boolean useNightMode = false;
+    private final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
+    private Future<?> pendingSunTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,9 +63,9 @@ public class SunActivity extends AppCompatActivity {
             return WindowInsetsCompat.CONSUMED;
         });
 
-        android.content.SharedPreferences prefs = getSharedPreferences("campertools_prefs", MODE_PRIVATE);
-        useImperial = prefs.getBoolean("pref_use_imperial", false);
-        useNightMode = prefs.getBoolean("pref_use_night_mode", false);
+        android.content.SharedPreferences prefs = getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE);
+        useImperial = prefs.getBoolean(AppPrefs.PREF_USE_IMPERIAL, false);
+        useNightMode = prefs.getBoolean(AppPrefs.PREF_USE_NIGHT_MODE, false);
 
         textWeatherHeader = findViewById(R.id.textWeatherHeader);
         textSunrise = findViewById(R.id.textSunrise);
@@ -95,8 +98,8 @@ public class SunActivity extends AppCompatActivity {
 
         textBack.setOnClickListener(v -> finish());
 
-        if (getIntent().hasExtra("weather_json")) {
-            String json = getIntent().getStringExtra("weather_json");
+        if (getIntent().hasExtra(AppExtras.EXTRA_WEATHER_JSON)) {
+            String json = getIntent().getStringExtra(AppExtras.EXTRA_WEATHER_JSON);
             parseAndDisplaySunData(json);
         } else if (lastJsonSunData != null) {
             parseAndDisplaySunData(lastJsonSunData);
@@ -105,51 +108,41 @@ public class SunActivity extends AppCompatActivity {
             if (cachedLocation != null) {
                 fetchSunData(cachedLocation);
             } else {
-                textSunStatus.setText("");
+                textSunStatus.setText(R.string.no_location_fix);
             }
         }
     }
 
     private void fetchSunData(Location location) {
         textSunStatus.setText(getString(R.string.fetching_weather));
-        new Thread(() -> {
+        if (pendingSunTask != null) {
+            pendingSunTask.cancel(true);
+        }
+        pendingSunTask = networkExecutor.submit(() -> {
             try {
-                // Fetch daily wind gusts, and hourly cloudcover, sunshine_duration, is_day
-                // Updated URL with daily params
-                String urlStr =
-                        "https://api.open-meteo.com/v1/forecast"
-                                + "?latitude=" + location.getLatitude()
-                                + "&longitude=" + location.getLongitude()
-                                + "&daily=sunrise,sunset,windgusts_10m_max,temperature_2m_max,temperature_2m_min,precipitation_sum,winddirection_10m_dominant,weathercode"
-                                + "&hourly=cloudcover,sunshine_duration,is_day"
-                                + "&timezone=auto";
-
-                URL url = new URL(urlStr);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                InputStream is = connection.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
+                final String json = OpenMeteoClient.fetchForecastJson(
+                        location.getLatitude(),
+                        location.getLongitude()
+                );
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
                 }
-                reader.close();
-                final String json = sb.toString();
 
                 runOnUiThread(() -> {
-                    if (isFinishing()) return;
+                    if (isFinishing() || isDestroyed()) return;
                     parseAndDisplaySunData(json);
                 });
 
             } catch (Exception e) {
-                e.printStackTrace();
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
                 runOnUiThread(() -> {
-                    if (isFinishing()) return;
+                    if (isFinishing() || isDestroyed()) return;
                     textSunStatus.setText(getString(R.string.error_fetching_weather));
                 });
             }
-        }).start();
+        });
     }
 
     private void parseAndDisplaySunData(String json) {
@@ -168,7 +161,6 @@ public class SunActivity extends AppCompatActivity {
             JSONArray tempMinArray = daily.optJSONArray("temperature_2m_min");
             JSONArray precipSumArray = daily.optJSONArray("precipitation_sum");
             JSONArray windDirArray = daily.optJSONArray("winddirection_10m_dominant");
-            JSONArray weatherCodeArray = daily.optJSONArray("weathercode");
             JSONArray timeArray = daily.optJSONArray("time");
 
             // Hourly Data
@@ -277,11 +269,21 @@ public class SunActivity extends AppCompatActivity {
                             double min = tempMinArray.getDouble(dataIdx);
                             double max = tempMaxArray.getDouble(dataIdx);
                             if (useImperial) {
-                                min = (min * 9/5) + 32;
-                                max = (max * 9/5) + 32;
-                                dayTemps[i].setText(String.format(Locale.getDefault(), "Low %.0f°F / High %.0f°F", min, max));
+                                min = WeatherUnits.celsiusToFahrenheit(min);
+                                max = WeatherUnits.celsiusToFahrenheit(max);
+                                dayTemps[i].setText(String.format(
+                                        Locale.getDefault(),
+                                        getString(R.string.forecast_temp_imperial),
+                                        min,
+                                        max
+                                ));
                             } else {
-                                dayTemps[i].setText(String.format(Locale.getDefault(), "Low %.0f°C / High %.0f°C", min, max));
+                                dayTemps[i].setText(String.format(
+                                        Locale.getDefault(),
+                                        getString(R.string.forecast_temp_metric),
+                                        min,
+                                        max
+                                ));
                             }
                         }
 
@@ -289,10 +291,17 @@ public class SunActivity extends AppCompatActivity {
                         if (precipSumArray != null && dataIdx < precipSumArray.length()) {
                             double p = precipSumArray.getDouble(dataIdx);
                             if (useImperial) {
-                                double pIn = p * 0.0393701;
-                                dayPrecips[i].setText(String.format(Locale.getDefault(), "Precip: %.2f in", pIn));
+                                dayPrecips[i].setText(String.format(
+                                        Locale.getDefault(),
+                                        getString(R.string.forecast_precip_imperial),
+                                        WeatherUnits.mmToInches(p)
+                                ));
                             } else {
-                                dayPrecips[i].setText(String.format(Locale.getDefault(), "Precip: %.1f mm", p));
+                                dayPrecips[i].setText(String.format(
+                                        Locale.getDefault(),
+                                        getString(R.string.forecast_precip_metric),
+                                        p
+                                ));
                             }
                         }
 
@@ -304,13 +313,26 @@ public class SunActivity extends AppCompatActivity {
                             if (windGustsArray != null && dataIdx < windGustsArray.length()) {
                                 double maxGustKmh = windGustsArray.getDouble(dataIdx);
                                 if (useImperial) {
-                                    double maxGustMph = maxGustKmh * 0.621371;
-                                    dayWinds[i].setText(String.format(Locale.getDefault(), "Wind Gusts: %.1f mph %s", maxGustMph, dir));
+                                    dayWinds[i].setText(String.format(
+                                            Locale.getDefault(),
+                                            getString(R.string.forecast_wind_imperial),
+                                            WeatherUnits.kmhToMph(maxGustKmh),
+                                            dir
+                                    ));
                                 } else {
-                                    dayWinds[i].setText(String.format(Locale.getDefault(), "Wind Gusts: %.1f km/h %s", maxGustKmh, dir));
+                                    dayWinds[i].setText(String.format(
+                                            Locale.getDefault(),
+                                            getString(R.string.forecast_wind_metric),
+                                            maxGustKmh,
+                                            dir
+                                    ));
                                 }
                             } else {
-                                dayWinds[i].setText("Wind Gusts: " + dir);
+                                dayWinds[i].setText(String.format(
+                                        Locale.getDefault(),
+                                        getString(R.string.forecast_wind_direction_only),
+                                        dir
+                                ));
                             }
                         }
                     }
@@ -318,15 +340,22 @@ public class SunActivity extends AppCompatActivity {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
             textSunStatus.setText(getString(R.string.error_parsing_weather));
         }
     }
 
     private String getCardinalDirection(double deg) {
-        String[] cardinal = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-        int idx = (int) Math.round(((deg % 360) / 45)) % 8;
-        return cardinal[idx];
+        return WeatherUnits.cardinalDirection(deg);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (pendingSunTask != null) {
+            pendingSunTask.cancel(true);
+            pendingSunTask = null;
+        }
+        networkExecutor.shutdownNow();
     }
 
     private void applyNightMode() {

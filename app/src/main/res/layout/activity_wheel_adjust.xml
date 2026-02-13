@@ -11,7 +11,7 @@
         android:id="@+id/textHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Vehicle Dimensions"
+        android:text="@string/vehicle_dimensions"
         android:textStyle="bold"
         android:textSize="18sp"
         android:layout_marginBottom="8dp"/>
@@ -35,7 +35,8 @@
             android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:inputType="numberDecimal"
-            android:hint="0.0"
+            android:hint="@string/decimal_hint"
+            android:importantForAutofill="no"
             android:gravity="end"/>
     </LinearLayout>
 
@@ -58,7 +59,8 @@
             android:layout_width="100dp"
             android:layout_height="wrap_content"
             android:inputType="numberDecimal"
-            android:hint="0.0"
+            android:hint="@string/decimal_hint"
+            android:importantForAutofill="no"
             android:gravity="end"/>
     </LinearLayout>
 
@@ -76,8 +78,8 @@
             android:layout_above="@+id/chassisBox"
             android:layout_centerHorizontal="true"
             android:layout_marginBottom="4dp"
-            android:text="FRONT (Phone Top)"
-            android:textSize="10sp"
+            android:text="@string/front_phone_top"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:textColor="@color/secondary_text" />
 
@@ -95,7 +97,7 @@
                 android:id="@+id/textChassisArrow"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="↑"
+                android:text="@string/arrow_up"
                 android:textSize="32sp"
                 android:textColor="#88000000" />
 
@@ -103,7 +105,7 @@
                 android:id="@+id/textChassisFront"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="VEHICLE\nFRONT"
+                android:text="@string/vehicle_front"
                 android:textStyle="bold"
                 android:textSize="14sp"
                 android:gravity="center"
@@ -119,12 +121,13 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
+            android:layout_toStartOf="@id/chassisBox"
             android:layout_marginTop="20dp"
             android:layout_marginStart="10dp"
             android:orientation="vertical"
             android:gravity="center_horizontal">
             <TextView android:id="@+id/labelFL" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/wheel_fl" android:textStyle="bold" android:textSize="16sp"/>
-            <TextView android:id="@+id/textFLValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/textFLValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/decimal_hint" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
         </LinearLayout>
 
         <!-- Front Right -->
@@ -134,12 +137,13 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"
+            android:layout_toEndOf="@id/chassisBox"
             android:layout_marginTop="20dp"
             android:layout_marginEnd="10dp"
             android:orientation="vertical"
             android:gravity="center_horizontal">
             <TextView android:id="@+id/labelFR" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/wheel_fr" android:textStyle="bold" android:textSize="16sp"/>
-            <TextView android:id="@+id/textFRValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/textFRValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/decimal_hint" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
         </LinearLayout>
 
         <!-- Back Left -->
@@ -149,12 +153,13 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_alignParentBottom="true"
+            android:layout_toStartOf="@id/chassisBox"
             android:layout_marginBottom="20dp"
             android:layout_marginStart="10dp"
             android:orientation="vertical"
             android:gravity="center_horizontal">
             <TextView android:id="@+id/labelBL" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/wheel_bl" android:textStyle="bold" android:textSize="16sp"/>
-            <TextView android:id="@+id/textBLValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/textBLValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/decimal_hint" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
         </LinearLayout>
 
         <!-- Back Right -->
@@ -164,12 +169,13 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
+            android:layout_toEndOf="@id/chassisBox"
             android:layout_marginBottom="20dp"
             android:layout_marginEnd="10dp"
             android:orientation="vertical"
             android:gravity="center_horizontal">
             <TextView android:id="@+id/labelBR" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/wheel_br" android:textStyle="bold" android:textSize="16sp"/>
-            <TextView android:id="@+id/textBRValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/textBRValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/decimal_hint" android:textColor="@color/teal_200" android:textSize="16sp" android:textStyle="bold"/>
         </LinearLayout>
 
     </RelativeLayout>

@@ -30,8 +30,8 @@ public class HelpActivity extends AppCompatActivity {
             return WindowInsetsCompat.CONSUMED;
         });
 
-        SharedPreferences prefs = getSharedPreferences("campertools_prefs", MODE_PRIVATE);
-        useNightMode = prefs.getBoolean("pref_use_night_mode", false);
+        SharedPreferences prefs = getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE);
+        useNightMode = prefs.getBoolean(AppPrefs.PREF_USE_NIGHT_MODE, false);
 
         Button buttonClose = findViewById(R.id.buttonClose);
         buttonClose.setOnClickListener(v -> finish());

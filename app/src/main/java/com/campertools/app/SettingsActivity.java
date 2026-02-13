@@ -235,7 +235,7 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
 
     private void performAutoCalibration() {
         if (!hasGravity) {
-            Toast.makeText(this, "Waiting for sensor data...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.waiting_for_sensor_data, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -271,6 +271,6 @@ public class SettingsActivity extends AppCompatActivity implements SensorEventLi
         inputPitchOffset.setText(String.format(Locale.getDefault(), "%.1f", pitchDeg));
         inputRollOffset.setText(String.format(Locale.getDefault(), "%.1f", rollDeg));
         
-        Toast.makeText(this, "Calibrated from current position", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.calibrated_from_current_position, Toast.LENGTH_SHORT).show();
     }
 }

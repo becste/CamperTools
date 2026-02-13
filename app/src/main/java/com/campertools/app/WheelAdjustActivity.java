@@ -28,15 +28,13 @@ import java.util.Locale;
 
 public class WheelAdjustActivity extends AppCompatActivity implements SensorEventListener {
 
-    private static final String PREFS = "campertools_prefs";
-    private static final String PREF_WHEELBASE = "pref_wheelbase";
-    private static final String PREF_TRACK_WIDTH = "pref_track_width";
+    private static final long MEASURE_DURATION_MS = 2_000L;
 
     private EditText inputWheelbase;
     private EditText inputTrackWidth;
     private TextView textFLValue, textFRValue, textBLValue, textBRValue;
     private TextView labelFL, labelFR, labelBL, labelBR;
-    private TextView textFrontLabel, textHeader, textClose, textPhoneTopLabel;
+    private TextView textHeader, textClose, textPhoneTopLabel;
     private TextView labelWheelbase, labelTrackWidth;
     private TextView textChassisFront, textChassisArrow;
     private Button buttonRecalculate;
@@ -61,6 +59,8 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
     // Locked Values (Normalized -1..1)
     private float lockedNormX = 0f;
     private float lockedNormY = 0f;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable stopMeasurementRunnable = this::stopMeasurement;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,14 +107,14 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             rollOffsetDeg = getIntent().getFloatExtra(SettingsActivity.EXTRA_ROLL_OFFSET_DEG, 0f);
             useImperial = getIntent().getBooleanExtra(SettingsActivity.EXTRA_USE_IMPERIAL, false);
             useNightMode = getIntent().getBooleanExtra(SettingsActivity.EXTRA_USE_NIGHT_MODE, false);
-            lockedNormX = getIntent().getFloatExtra("EXTRA_START_NORM_X", 0f);
-            lockedNormY = getIntent().getFloatExtra("EXTRA_START_NORM_Y", 0f);
+            lockedNormX = getIntent().getFloatExtra(AppExtras.EXTRA_START_NORM_X, 0f);
+            lockedNormY = getIntent().getFloatExtra(AppExtras.EXTRA_START_NORM_Y, 0f);
         }
 
         // Load Prefs
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        wheelbase = prefs.getFloat(PREF_WHEELBASE, 0f);
-        trackWidth = prefs.getFloat(PREF_TRACK_WIDTH, 0f);
+        SharedPreferences prefs = getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE);
+        wheelbase = prefs.getFloat(AppPrefs.PREF_WHEELBASE, 0f);
+        trackWidth = prefs.getFloat(AppPrefs.PREF_TRACK_WIDTH, 0f);
 
         if (wheelbase > 0) inputWheelbase.setText(String.format(Locale.US, "%.1f", wheelbase));
         if (trackWidth > 0) inputTrackWidth.setText(String.format(Locale.US, "%.1f", trackWidth));
@@ -150,17 +150,17 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         if (isMeasuring) return;
         isMeasuring = true;
         buttonRecalculate.setEnabled(false);
-        buttonRecalculate.setText("Measuring...");
+        buttonRecalculate.setText(R.string.measuring);
         
         accX = 0;
         accY = 0;
         sampleCount = 0;
         
-        if (sensorManager != null) {
+        if (sensorManager != null && accelerometer != null) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
         }
-        
-        new Handler(Looper.getMainLooper()).postDelayed(this::stopMeasurement, 2000);
+
+        mainHandler.postDelayed(stopMeasurementRunnable, MEASURE_DURATION_MS);
     }
 
     private void stopMeasurement() {
@@ -187,11 +187,11 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
 
     private void applyUnits() {
         if (useImperial) {
-            labelWheelbase.setText("Wheelbase (inches)");
-            labelTrackWidth.setText("Track Width (inches)");
+            labelWheelbase.setText(R.string.wheelbase_label_inches);
+            labelTrackWidth.setText(R.string.track_width_label_inches);
         } else {
-            labelWheelbase.setText("Wheelbase (cm)");
-            labelTrackWidth.setText("Track Width (cm)");
+            labelWheelbase.setText(R.string.wheelbase_label_cm);
+            labelTrackWidth.setText(R.string.track_width_label_cm);
         }
     }
 
@@ -202,9 +202,9 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
             if (!wbStr.isEmpty()) wheelbase = Float.parseFloat(wbStr);
             if (!twStr.isEmpty()) trackWidth = Float.parseFloat(twStr);
 
-            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                    .putFloat(PREF_WHEELBASE, wheelbase)
-                    .putFloat(PREF_TRACK_WIDTH, trackWidth)
+            getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE).edit()
+                    .putFloat(AppPrefs.PREF_WHEELBASE, wheelbase)
+                    .putFloat(AppPrefs.PREF_TRACK_WIDTH, trackWidth)
                     .apply();
         } catch (NumberFormatException e) {
             // Ignore
@@ -223,6 +223,7 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
+        mainHandler.removeCallbacks(stopMeasurementRunnable);
         isMeasuring = false;
         buttonRecalculate.setEnabled(true);
         buttonRecalculate.setText(R.string.recalculate_button);
@@ -283,9 +284,17 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
 
     private void updateWheelText(TextView view, double val) {
         if (useImperial) {
-            view.setText(String.format(Locale.US, "%.1f\"", val));
+            view.setText(String.format(
+                    Locale.getDefault(),
+                    getString(R.string.wheel_value_imperial),
+                    val
+            ));
         } else {
-            view.setText(String.format(Locale.US, "%.1f cm", val));
+            view.setText(String.format(
+                    Locale.getDefault(),
+                    getString(R.string.wheel_value_metric),
+                    val
+            ));
         }
     }
 
@@ -324,7 +333,6 @@ public class WheelAdjustActivity extends AppCompatActivity implements SensorEven
         findViewById(android.R.id.content).setBackgroundColor(backgroundColor);
 
         if (textHeader != null) textHeader.setTextColor(textColor);
-        if (textFrontLabel != null) textFrontLabel.setTextColor(textColor);
         if (textPhoneTopLabel != null) textPhoneTopLabel.setTextColor(textColor);
         if (labelWheelbase != null) labelWheelbase.setTextColor(textColor);
         

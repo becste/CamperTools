@@ -29,6 +29,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:labelFor="@id/inputPitchOffset"
             android:text="@string/calibration_pitch_label" />
 
         <EditText
@@ -38,6 +39,7 @@
             android:inputType="numberSigned|numberDecimal"
             android:gravity="end"
             android:maxLines="1"
+            android:importantForAutofill="no"
             android:padding="6dp" />
     </LinearLayout>
 
@@ -53,6 +55,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:labelFor="@id/inputRollOffset"
             android:text="@string/calibration_roll_label" />
 
         <EditText
@@ -62,6 +65,7 @@
             android:inputType="numberSigned|numberDecimal"
             android:gravity="end"
             android:maxLines="1"
+            android:importantForAutofill="no"
             android:padding="6dp" />
     </LinearLayout>
 
